@@ -122,7 +122,7 @@ class HungerGames(commands.Cog):
             return await ctx.respond("❌ This game is full.")
 
         await PlayerModel.create(game=game, user_id=ctx.author.id)
-        await ctx.respond("✅ You have joined the game.")
+        await ctx.respond(f"✅ {ctx.author.mention} have joined the game **{game}**.")
 
     @commands.slash_command(description="Create a Hunger Games game.")
     @discord.default_permissions(moderate_members=True)
@@ -148,7 +148,7 @@ class HungerGames(commands.Cog):
         game.is_started = True
         await game.save()
 
-        await ctx.respond("✅ The game has started.")
+        await ctx.respond(f"✅ The game **{game}** has started.")
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
 
     @commands.slash_command(description="Create and start a Hunger Games game.")
@@ -171,7 +171,7 @@ class HungerGames(commands.Cog):
             await PlayerModel.create(game=game, user_id=index)
 
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
-        await ctx.respond("✅ Done.")
+        await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
 
 
 def setup(client):
