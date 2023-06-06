@@ -6,27 +6,19 @@ from utils.client import HungerGamesBot
 
 class InviteView(discord.ui.View):
     def __init__(self, client: HungerGamesBot):
-        super().__init__(timeout=0)
-        server_url = "https://discord.gg/yoggies"
         invite_url = "https://canary.discord.com/api/oauth2/authorize?client_id={}&permissions=8&scope=bot%20applications.commands".format(
             client.application_id
         )
+        server_url = "https://discord.gg/yoggies"
 
-        @discord.ui.button(
+        invite = discord.ui.Button(
             label="Invite HungerGames", style=discord.ButtonStyle.url, url=invite_url
         )
-        async def invite(
-            self, button: discord.ui.Button, interaction: discord.Interaction
-        ):
-            pass
-
-        @discord.ui.button(
+        server = discord.ui.Button(
             label="Support server", style=discord.ButtonStyle.url, url=server_url
         )
-        async def support(
-            self, button: discord.ui.Button, interaction: discord.Interaction
-        ):
-            pass
+
+        super().__init__(invite, server, timeout=0)
 
 
 class System(commands.Cog):

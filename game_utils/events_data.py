@@ -6,7 +6,7 @@ from utils.models import GameModel, PlayerModel
 
 # Utils
 def init_utils(**kwargs) -> tuple[GameModel, PlayerModel, Event]:
-    """ Initializes utils for the event callback function. """
+    """Initializes utils for the event callback function."""
     game: GameModel = kwargs.get("game")
     player: PlayerModel = kwargs.get("player")
     event: Event = kwargs.get("event")
