@@ -46,7 +46,7 @@ class HungerGames(commands.Cog):
         players = await self.get_day_alive_players(game=game)
 
         if len(players) < 2:
-            await self.check_game_end(game=game, skip_check=True)
+            return await self.check_game_end(game=game, skip_check=True)
 
         while len(players) > 1:
             random.shuffle(players)
@@ -100,7 +100,7 @@ class HungerGames(commands.Cog):
         event = await event.execute(game=game, player=player, event=event)
 
         embed = discord.Embed(
-            title="Hunger Games",
+            title=f"Hunger Games #{game.id}",
             description=event.text,
             color=event._type.value,
         )
@@ -256,7 +256,7 @@ class HungerGames(commands.Cog):
             return await ctx.respond("❌ This game has already started.")
 
         await game.fetch_related("players")
-        if len(game.players) < 0:
+        if len(game.players) < 2:
             return await ctx.respond("❌ This game does not have enough players.")
 
         game.is_started = True
