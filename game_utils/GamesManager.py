@@ -100,7 +100,7 @@ class GamesManager:
         event = await event.execute(game=game, player=player, event=event)
 
         embed = discord.Embed(
-            title=f"Hunger Games #{game.id}",
+            title=f"Hunger Games {game}",
             description=event.text,
             color=event._type.value,
         )
@@ -124,4 +124,4 @@ class GamesManager:
         winner = await game.players.filter(is_alive=True).first()
 
         channel = self.client.get_channel(game.channel_id)
-        return await channel.send(f"🎉 {winner} won the **#{game.id}** Hunger Games!")
+        return await channel.send(f"🎉 {winner} won the **{game}** Hunger Games!")
