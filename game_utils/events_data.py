@@ -6,6 +6,7 @@ from utils.models import GameModel, PlayerModel
 
 # Utils
 def init_utils(**kwargs) -> tuple[GameModel, PlayerModel, Event]:
+    """ Initializes utils for the event callback function. """
     game: GameModel = kwargs.get("game")
     player: PlayerModel = kwargs.get("player")
     event: Event = kwargs.get("event")
@@ -54,4 +55,5 @@ events_weights = [event.weight for event in event_list]
 
 # Get random event for the game
 async def get_random_event() -> Event:
+    """Returns a random event from the event list."""
     return random.choices(event_list, weights=events_weights)[0]
