@@ -3,7 +3,7 @@
 ## Requirements
 
 ```bash
-Python 3.10
+Python 3.8+
 ```
 
 ## Installation
