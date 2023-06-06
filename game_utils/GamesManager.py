@@ -33,34 +33,32 @@ class GamesManager:
 
     async def run_game(self, game: GameModel):
         """Run a specific game."""
-        loop_minutes = game.day_length
+        loop_length = game.day_length * 60
         last_loop = game.updated_at or game.created_at
 
-        remaining_minutes = int(
-            loop_minutes
-            - (datetime.now(last_loop.tzinfo) - last_loop).total_seconds() / 60
+        remaining_time = int(
+            (loop_length - (datetime.now(last_loop.tzinfo) - last_loop).total_seconds())
         )
 
         players = await self.get_alive_players(model=game)
-
         if len(players) < 2:
             return await self.check_game_end(game=game, skip_check=True)
 
         while len(players) > 1:
             random.shuffle(players)
             if await self.run_day(
-                game=game, players=players, remaining_minutes=remaining_minutes
+                game=game, players=players, remaining_time=remaining_time
             ):
                 break
-            remaining_minutes = game.day_length
+            remaining_time = loop_length
             players = await self.get_alive_players(model=game)
 
     async def run_day(
-        self, game: GameModel, players: list[PlayerModel], remaining_minutes: int
+        self, game: GameModel, players: list[PlayerModel], remaining_time: int
     ) -> Union[bool, None]:
         """Run a day in the game."""
         if await self.run_players_events(
-            game=game, players=players, remaining_minutes=remaining_minutes
+            game=game, players=players, remaining_time=remaining_time
         ):
             return True
         game.current_day += 1
@@ -68,12 +66,10 @@ class GamesManager:
         await game.save()
 
     async def run_players_events(
-        self, game: GameModel, players: list[PlayerModel], remaining_minutes: int
+        self, game: GameModel, players: list[PlayerModel], remaining_time: int
     ) -> Union[bool, None]:
         """Run all alive players events."""
-        player_offset = (
-            0 if remaining_minutes <= 0 else int(remaining_minutes * 60 / len(players))
-        )
+        player_offset = 0 if remaining_time <= 0 else int(remaining_time / len(players))
         remaining_offset = 0
 
         for player in players:
