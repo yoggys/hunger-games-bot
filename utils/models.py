@@ -30,7 +30,7 @@ class GameModel(BaseModel):
     current_day_choices = fields.JSONField(default=[])
     invited_users = fields.JSONField(default=[])
     winner = fields.BigIntField(null=True)
-    
+
     def __str__(self) -> str:
         return f"#{self.id}"
 

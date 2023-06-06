@@ -6,21 +6,13 @@ from typing import Union
 import discord
 from tortoise.queryset import Q
 
-from game_utils.Events import Event
-from game_utils.events_data import event_list
+from game_utils.events_data import get_random_event
 from utils.models import GameModel, PlayerModel
 
 
 class GamesManager:
     def __init__(self, client):
         self.client = client
-        self.events: list[Event] = None
-        self.events_weights: list[float] = None
-
-    def register_events(self, events: list[Event] = None):
-        events = events or event_list
-        self.events = events
-        self.events_weights = [event.weight for event in events]
 
     async def get_alive_players(
         self, model: Union[GameModel, PlayerModel], count: bool = False
@@ -62,7 +54,7 @@ class GamesManager:
     async def run_day(
         self, game: GameModel, players: list[PlayerModel], remaining_minutes: int
     ) -> Union[bool, None]:
-        if await self.execute_events(
+        if await self.run_players(
             game=game, players=players, remaining_minutes=remaining_minutes
         ):
             return True
@@ -70,7 +62,7 @@ class GamesManager:
         game.current_day_choices.clear()
         await game.save()
 
-    async def execute_events(
+    async def run_players(
         self, game: GameModel, players: list[PlayerModel], remaining_minutes: int
     ) -> Union[bool, None]:
         player_offset = (
@@ -92,11 +84,8 @@ class GamesManager:
 
             await asyncio.sleep(remaining_offset)
 
-    async def get_random_event(self) -> Event:
-        return random.choices(self.events, weights=self.events_weights)[0]
-
     async def player_event(self, game: GameModel, player: PlayerModel) -> None:
-        event = await self.get_random_event()
+        event = await get_random_event()
         event = await event.execute(game=game, player=player, event=event)
 
         embed = discord.Embed(

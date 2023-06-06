@@ -49,3 +49,9 @@ event_list: list[Event] = [
     Event(weight=1, callback=nothing),
     Event(weight=1, callback=wild_animals),
 ]
+events_weights = [event.weight for event in event_list]
+
+
+# Get random event for the game
+async def get_random_event() -> Event:
+    return random.choices(event_list, weights=events_weights)[0]

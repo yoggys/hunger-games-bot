@@ -15,7 +15,6 @@ class HungerGames(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.GamesManager.register_events()
         await self.GamesManager.run_games()
 
     @commands.slash_command(description="Create a Hunger Games game.")
@@ -159,7 +158,6 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         players: discord.Option(int, "Number of players to create.") = 2,
     ) -> None:
-        
         game = await GameModel.create(
             guild_id=ctx.guild.id,
             channel_id=ctx.channel.id,
@@ -168,10 +166,10 @@ class HungerGames(commands.Cog):
             is_invite_only=True,
             day_length=1,
         )
-        
+
         for index in range(players):
             await PlayerModel.create(game=game, user_id=index)
-        
+
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond("✅ Done.")
 
