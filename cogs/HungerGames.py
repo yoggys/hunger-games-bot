@@ -61,7 +61,6 @@ class HungerGames(commands.Cog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(description="Invite someone to a Hunger Games game.")
-    @discord.default_permissions(moderate_members=True)
     async def hginvite(
         self,
         ctx: discord.ApplicationContext,
@@ -77,6 +76,9 @@ class HungerGames(commands.Cog):
 
         if game.owner_id != ctx.author.id:
             return await ctx.respond("❌ You are not the owner of this game.")
+
+        if game.is_started:
+            return await ctx.respond("❌ This game has already started.")
 
         if member.bot:
             return await ctx.respond("❌ You cannot invite bots to a game.")
@@ -94,10 +96,11 @@ class HungerGames(commands.Cog):
         game.invited_users.append(member.id)
         await game.save()
 
-        await ctx.respond(f"✅ {member.mention} has been invited to the game.")
+        await ctx.respond(
+            f"✅ {member.mention} has been invited to the game **{game}**."
+        )
 
     @commands.slash_command(description="Join a Hunger Games game.")
-    @discord.default_permissions(moderate_members=True)
     async def hgjoin(
         self,
         ctx: discord.ApplicationContext,
@@ -106,6 +109,9 @@ class HungerGames(commands.Cog):
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.")
+
+        if game.is_started:
+            return await ctx.respond("❌ This game has already started.")
 
         if (
             game.is_invite_only
