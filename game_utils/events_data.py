@@ -1,6 +1,6 @@
 import random
 
-from game_utils.events import Event, EventType
+from game_utils.Events import Event, EventType
 from utils.models import GameModel, PlayerModel
 
 
@@ -17,14 +17,27 @@ def init_utils(**kwargs) -> tuple[GameModel, PlayerModel, Event]:
 
 
 # Base event
-basic_texts: list[str] = ["{} didn't do anything interesting today."]
 
 
-async def basic(**kwargs) -> Event:
-    game, player, event = init_utils(**kwargs)
+async def nothing(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
 
+    nothing_texts: list[str] = ["{} didn't do anything interesting today."]
     event._type = EventType.PASSIVE
-    event.text = random.choice(basic_texts).format(player)
+    event.text = random.choice(nothing_texts).format(player)
+    return event
+
+
+async def wild_animals(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal and died."]
+    event._type = EventType.NEGATIVE
+    event.text = random.choice(wild_animals_texts).format(player)
+
+    player.is_alive = False
+    await player.save()
+
     return event
 
 
@@ -32,4 +45,7 @@ async def basic(**kwargs) -> Event:
 
 
 # Event list
-event_list: list[Event] = [Event(weight=1, callback=basic)]
+event_list: list[Event] = [
+    Event(weight=1, callback=nothing),
+    Event(weight=1, callback=wild_animals),
+]
