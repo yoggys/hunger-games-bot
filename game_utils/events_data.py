@@ -1,6 +1,6 @@
 import random
 
-from game_utils.events import Event, EventType
+from game_utils.Events import Event, EventType
 from utils.models import GameModel, PlayerModel
 
 

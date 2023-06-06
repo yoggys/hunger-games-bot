@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from tortoise import Tortoise
 
-from game_utils.events import Event
+from game_utils.Events import Event
 from game_utils.events_data import event_list
 from utils.models import GameModel, PlayerModel
 
