@@ -105,13 +105,11 @@ class GamesManager:
             color=event._type.value,
         )
 
-        user = self.client.get_user(player.user_id) or await self.client.fetch_user(
-            player.user_id
-        )
-        embed.set_thumbnail(url=user.display_avatar)
+        if user := self.client.get_user(player.user_id):
+            embed.set_thumbnail(url=user.display_avatar)
 
         channel = self.client.get_channel(game.channel_id)
-        await channel.send(user.mention, embed=embed)
+        await channel.send(player, embed=embed)
 
     async def check_game_end(
         self, game: GameModel, skip_check=False

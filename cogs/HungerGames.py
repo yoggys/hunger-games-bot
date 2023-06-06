@@ -150,23 +150,29 @@ class HungerGames(commands.Cog):
         await game.save()
 
         await ctx.respond("✅ The game has started.")
-        asyncio.ensure_future(self.run_game(game=game))
+        asyncio.ensure_future(self.GamesManager.run_game(game=game))
 
-    @commands.slash_command(description="Create a Hunger Games game.")
+    @commands.slash_command(description="Create and start a Hunger Games game.")
     @commands.is_owner()
-    async def debug(
+    async def hgdebug(
         self,
         ctx: discord.ApplicationContext,
-        game_id: discord.Option(int, "Game ID"),
+        players: discord.Option(int, "Number of players to create.") = 2,
     ) -> None:
-        game = await GameModel.get_or_none(id=game_id)
-        if not game:
-            return await ctx.respond("❌ Game not found.")
-
-        await game.fetch_related("players")
-        for player in game.players:
-            print(player.user_id)
-
+        
+        game = await GameModel.create(
+            guild_id=ctx.guild.id,
+            channel_id=ctx.channel.id,
+            owner_id=ctx.author.id,
+            max_players=2,
+            is_invite_only=True,
+            day_length=1,
+        )
+        
+        for index in range(players):
+            await PlayerModel.create(game=game, user_id=index)
+        
+        asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond("✅ Done.")
 
 
