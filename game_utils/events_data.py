@@ -140,6 +140,7 @@ async def chest(**kwargs) -> Event:
 event_list: list[Event] = [
     Event(weight=1, callback=nothing),
     Event(weight=1, callback=wild_animals),
+    Event(weight=1, callback=poisonous),
     Event(weight=1, callback=chest),
 ]
 events_weights = [event.weight for event in event_list]
