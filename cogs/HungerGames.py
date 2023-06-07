@@ -7,6 +7,8 @@ from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
 from utils.models import GameModel, PlayerModel
 
+from utils.Paginator import Paginator
+
 
 class HungerGames(commands.Cog):
     def __init__(self, client):
@@ -174,6 +176,7 @@ class HungerGames(commands.Cog):
             max_players=2,
             is_invite_only=True,
             day_length=1,
+            is_started=True,
         )
 
         for index in range(players):
@@ -181,6 +184,89 @@ class HungerGames(commands.Cog):
 
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
+
+    @commands.slash_command(description="Get more info about Hunger Game game.")
+    async def hggameinfo(
+        self,
+        ctx: discord.ApplicationContext,
+        game_id: discord.Option(int, "Game ID to get more info."),
+    ) -> None:
+        game = await GameModel.get_or_none(id=game_id)
+        if not game:
+            return await ctx.respond("❌ Game not found.")
+
+        if not game.is_started:
+            return await ctx.respond("❌ This game has not started yet.")
+
+        await game.fetch_related("players")
+
+        players = await PlayerModel.filter(game=game).order_by(
+            "-is_alive", "-current_day", "is_injured"
+        )
+
+        alive_count = len(list(filter(lambda x: x.is_alive, players)))
+        dead_count = len(players) - alive_count
+
+        embeds = []
+        players_for_embed = 10
+
+        title_embed = discord.Embed(
+            title=f"Hunger Games #{game_id}",
+        )
+        title_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
+        title_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
+        title_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
+        title_embed.add_field(
+            name="Winner",
+            value=f"*` Waiting... `*" if not game.winner else f"<@{game.winner}>",
+        )
+
+        for i in range(0, len(players), players_for_embed):
+            part = players[i : i + players_for_embed]
+
+            embeds.append(
+                [
+                    title_embed,
+                    discord.Embed(
+                        description="\n".join(
+                            [
+                                (
+                                    f"### {'Dead as of day ' if not part[player].is_alive else 'Day '}{part[player].current_day}\n"
+                                    if player == 0
+                                    or (
+                                        part[player].current_day
+                                        != part[player - 1].current_day
+                                    )
+                                    or (
+                                        part[player].is_alive
+                                        != part[player - 1].is_alive
+                                    )
+                                    else ""
+                                )
+                                + f"{'👑' if game.is_ended and (i == 0 and player == 0) else f'{i + player + 1}.'} {part[player]} {'💀' if not part[player].is_alive else ''}\n"
+                                + (
+                                    ("`Alive ❤️`{} {}".format('\n`Protected 💉`' if part[player].is_protected else ('\n`Injured 🤕`' if part[player].is_injured else ''), '`Armored 🛡️`' if part[player].is_armored else '') + "\n")
+                                    if part[player].is_alive
+                                    else f"```Killed by {part[player].death_by}```"
+                                )
+                                for player in range(len(part))
+                            ]
+                        ),
+                    ),
+                ]
+            )
+
+        if len(embeds) == 1:
+            await ctx.respond(embeds=embeds[0], ephemeral=True)
+        else:
+            pages = Paginator(pages=embeds)
+            await pages.respond(ctx.interaction, ephemeral=True)
+
+    @commands.slash_command(description="tst")
+    async def hgtest(self, ctx: discord.ApplicationContext) -> None:
+        pag = Paginator(pages=["a", "b", "c"])
+
+        await pag.respond(ctx.interaction, ephemeral=True)
 
 
 def setup(client):

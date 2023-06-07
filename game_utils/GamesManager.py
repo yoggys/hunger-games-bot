@@ -154,9 +154,11 @@ class GamesManager:
     async def end_game(self, game: GameModel) -> discord.Message:
         """End the game."""
         game.is_ended = True
+        game.winner = (await game.players.filter(is_alive=True).first()).user_id
+
         await game.save()
 
-        winner = await game.players.filter(is_alive=True).first()
-
         channel = self.client.get_channel(game.channel_id)
-        return await channel.send(f"🎉 {winner} won the **{game}** Hunger Games!")
+        return await channel.send(
+            f"🎉 <@{game.winner}> won the **{game}** Hunger Games!"
+        )
