@@ -1,4 +1,4 @@
-# HungerGames Discord Bot
+# Hunger Games Discord Bot
 
 ## Requirements
 
