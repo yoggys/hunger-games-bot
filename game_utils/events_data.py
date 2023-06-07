@@ -37,14 +37,14 @@ async def wild_animals(**kwargs) -> Event:
     if player.is_armored:
         event._type = EventType.POSITIVE
         event.text = random.choice(wild_animals_texts).format(player)
-        event.text += f" Luckily, {player} survived the fight due to their armor."
+        event.text += f"\nLuckily, {player} survived the fight due to their armor."
         player.is_armored = False
 
         return event
     else:
         event._type = EventType.NEGATIVE
         event.text = random.choice(wild_animals_texts).format(player)
-        event.text += f" Sadly, {player} didn't survive."
+        event.text += f"\nSadly, {player} didn't survive."
 
         player.is_alive = False
 
@@ -62,7 +62,7 @@ async def poisonous(**kwargs) -> Event:
     if player.is_protected:
         event._type = EventType.POSITIVE
         event.text = random.choice(poisonous_texts).format(player)
-        event.text += f" Luckily, {player} survived due to their medicines."
+        event.text += f"\nLuckily, {player} survived due to their medicines."
 
         player.is_protected = False
 
@@ -71,10 +71,10 @@ async def poisonous(**kwargs) -> Event:
         event.text = random.choice(poisonous_texts).format(player)
 
         if random.choice([True, False]):
-            event.text += f" {player} don't feel so good."
+            event.text += f"\n{player} don't feel so good."
             player.is_injured = True
         else:
-            event.text += f" Sadly poison was too strong for {player}."
+            event.text += f"\nSadly poison was too strong for {player}."
             player.is_alive = False
 
     await player.save()
@@ -107,7 +107,7 @@ async def chest(**kwargs) -> Event:
                 player.is_protected = True
             else:
                 event._type = EventType.PASSIVE
-                event.text += " {} already had it so nothing has changed.".format(
+                event.text += "\n{} already had it so nothing has changed.".format(
                     player
                 )
 
@@ -119,7 +119,7 @@ async def chest(**kwargs) -> Event:
 
         if player.is_armored:
             event._type = EventType.PASSIVE
-            event.text += " Fortunately, the life of {} was saved by the armor.".format(
+            event.text += "\nFortunately, the life of {} was saved by the armor.".format(
                 player
             )
 
