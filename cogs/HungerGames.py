@@ -124,12 +124,13 @@ class HungerGames(commands.Cog):
         if ctx.author.id in [player.user_id for player in game.players]:
             return await ctx.respond("❌ You are already in this game.")
 
-        if len(game.players) >= game.max_players:
+        current_players = len(game.players)
+        if current_players >= game.max_players:
             return await ctx.respond("❌ This game is full.")
 
         await PlayerModel.create(game=game, user_id=ctx.author.id)
         await ctx.respond(
-            f"✅ {ctx.author.mention} have joined the game **{game}** ({len(game.players)}/{game.max_players})."
+            f"✅ {ctx.author.mention} have joined the game **{game}** ({current_players + 1}/{game.max_players})."
         )
 
     @commands.slash_command(description="Create a Hunger Games game.")
