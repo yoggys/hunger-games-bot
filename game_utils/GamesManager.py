@@ -99,7 +99,7 @@ class GamesManager:
                 discord.Embed(
                     description="\n".join([str(player) for player in deaths_today]),
                     color=discord.Color.gold(),
-                ).set_footer(test="We'll see what the next day brings..."),
+                ).set_footer(text="We'll see what the next day brings..."),
             ]
 
         await channel.send(f"Hunger Games **{game}**.", embeds=embeds)
