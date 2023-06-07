@@ -128,7 +128,9 @@ class HungerGames(commands.Cog):
             return await ctx.respond("❌ This game is full.")
 
         await PlayerModel.create(game=game, user_id=ctx.author.id)
-        await ctx.respond(f"✅ {ctx.author.mention} have joined the game **{game}**.")
+        await ctx.respond(
+            f"✅ {ctx.author.mention} have joined the game **{game}** ({len(game.players)}/{game.max_players})."
+        )
 
     @commands.slash_command(description="Create a Hunger Games game.")
     @discord.default_permissions(moderate_members=True)
