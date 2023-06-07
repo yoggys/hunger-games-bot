@@ -32,21 +32,50 @@ async def nothing(**kwargs) -> Event:
 async def wild_animals(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal{}."]
+    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal."]
 
     if player.is_armored:
         event._type = EventType.POSITIVE
-        event.text = random.choice(wild_animals_texts).format(
-            player, ", but survived thanks to their armor"
-        )
+        event.text = random.choice(wild_animals_texts).format(player)
+        event.text += f" Luckily, {player} survived the fight due to their armor."
         player.is_armored = False
 
         return event
     else:
         event._type = EventType.NEGATIVE
-        event.text = random.choice(wild_animals_texts).format(player, " and died")
+        event.text = random.choice(wild_animals_texts).format(player)
+        event.text += f" Sadly, {player} didn't survive."
 
         player.is_alive = False
+
+    await player.save()
+    return event
+
+
+async def poisonous(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    poisonous_texts: list[str] = [
+        "{} decided to eat some berries, but they were poisonous."
+    ]
+
+    if player.is_protected:
+        event._type = EventType.POSITIVE
+        event.text = random.choice(poisonous_texts).format(player)
+        event.text += f" Luckily, {player} survived due to their medicines."
+
+        player.is_protected = False
+
+    else:
+        event._type = EventType.NEGATIVE
+        event.text = random.choice(poisonous_texts).format(player)
+
+        if random.choice([True, False]):
+            event.text += f" {player} don't feel so good."
+            player.is_injured = True
+        else:
+            event.text += f" Sadly poison was too strong for {player}."
+            player.is_alive = False
 
     await player.save()
     return event
