@@ -15,7 +15,7 @@ class System(commands.Cog):
 
     async def change_presence(self):
         activity = discord.Activity(
-            type=discord.ActivityType.watching,
+            type=discord.ActivityType.streaming,
             name="Begin your adventure!",
         )
         await self.client.change_presence(
