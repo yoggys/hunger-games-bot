@@ -28,7 +28,9 @@ class GameModel(BaseModel):
     max_players = fields.IntField(default=24)
     current_day = fields.IntField(default=1)
     current_day_choices = fields.JSONField(default=[])
-    invited_users = fields.JSONField(default=[])
+    invited_users = fields.JSONField(default=[
+        
+    ])
     winner = fields.BigIntField(null=True)
 
     def __str__(self) -> str:
