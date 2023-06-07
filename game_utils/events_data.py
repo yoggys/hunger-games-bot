@@ -32,13 +32,23 @@ async def nothing(**kwargs) -> Event:
 async def wild_animals(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal and died."]
-    event._type = EventType.NEGATIVE
-    event.text = random.choice(wild_animals_texts).format(player)
+    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal {}."]
 
-    player.is_alive = False
+    if player.is_armored:
+        event._type = EventType.POSITIVE
+        event.text = random.choice(wild_animals_texts).format(
+            player, ", but survived thanks to their armor"
+        )
+        player.is_armored = False
+
+        return event
+    else:
+        event._type = EventType.NEGATIVE
+        event.text = random.choice(wild_animals_texts).format(player, "and died")
+
+        player.is_alive = False
+
     await player.save()
-
     return event
 
 
