@@ -41,22 +41,26 @@ async def wild_animals(**kwargs) -> Event:
 
     return event
 
+
 async def chest(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
     loot = random.randint(1, 3)
-    good_loot_text = ["{} found a chest {}"]
-    bad_loot_text = ["{} found a chest that turned out to be an exploding trap."]
 
     if loot % 3:
+        good_loot_text = ["{} found a chest {}"]
         event._type = EventType.POSITIVE
 
         if player.is_injured:
             player.is_injured = False
-            event.text = random.choice(good_loot_text).format(player, "of medicine that healed him.")
+            event.text = random.choice(good_loot_text).format(
+                player, "of medicine that healed him."
+            )
 
         else:
-            event.text = random.choice(good_loot_text).format(player, "with " + ("armor." if loot == 1 else "medicine."))
+            event.text = random.choice(good_loot_text).format(
+                player, "with " + ("armor." if loot == 1 else "medicine.")
+            )
 
             if loot == 1 and not player.is_armored:
                 player.is_armored = True
@@ -64,19 +68,24 @@ async def chest(**kwargs) -> Event:
                 player.is_protected = True
             else:
                 event._type = EventType.PASSIVE
-                event.text += " {} already had it so nothing has changed.".format(player)
+                event.text += " {} already had it so nothing has changed.".format(
+                    player
+                )
 
     else:
+        bad_loot_text = ["{} found a chest that turned out to be an exploding trap."]
         event._type = EventType.NEGATIVE
 
         event.text = random.choice(bad_loot_text).format(player)
 
         if player.is_armored:
             event._type = EventType.PASSIVE
-            event.text += "Fortunately, the life of {} was saved by the armor.".format(player)
+            event.text += " Fortunately, the life of {} was saved by the armor.".format(
+                player
+            )
 
             player.is_armored = False
-            
+
         else:
             player.is_alive = False
 
@@ -92,7 +101,7 @@ async def chest(**kwargs) -> Event:
 event_list: list[Event] = [
     Event(weight=1, callback=nothing),
     Event(weight=1, callback=wild_animals),
-    Event(weight=1, callback=chest)
+    Event(weight=1, callback=chest),
 ]
 events_weights = [event.weight for event in event_list]
 
