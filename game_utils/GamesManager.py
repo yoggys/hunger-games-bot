@@ -7,8 +7,8 @@ import discord
 from tortoise.queryset import Q
 
 from game_utils.events_data import get_random_event
-from utils.models import GameModel, PlayerModel
 from utils.client import HungerGamesBot
+from utils.models import GameModel, PlayerModel
 
 
 class GamesManager:
@@ -16,13 +16,16 @@ class GamesManager:
         self.client = client
 
     async def get_alive_players(
-        self, model: Union[GameModel, PlayerModel], count: bool = False
+        self,
+        model: Union[GameModel, PlayerModel],
+        restart: bool = False,
+        count: bool = False,
     ) -> Union[list[PlayerModel], int]:
         """Returns a list of alive players in the game."""
         model = model if isinstance(model, GameModel) else model.game
-        queryset = PlayerModel.filter(
-            Q(game=model) & Q(is_alive=True) & ~Q(current_day=model.current_day)
-        )
+        queryset = PlayerModel.filter(Q(game=model) & Q(is_alive=True))
+        if restart:
+            queryset = queryset.filter(~Q(current_day=model.current_day))
         return await queryset.count() if count else await queryset
 
     async def run_games(self):
@@ -44,13 +47,22 @@ class GamesManager:
         if len(players) < 2:
             return await self.check_game_end(game=game, skip_check=True)
 
+        if any([player.current_day < game.current_day for player in players]):
+            players = await self.get_alive_players(model=game, restart=True)
+
         while len(players) > 1:
             random.shuffle(players)
             if await self.run_day(
                 game=game, players=players, remaining_time=remaining_time
             ):
                 break
+
             remaining_time = loop_length
+
+            game.current_day += 1
+            game.current_day_choices.clear()
+            await game.save()
+
             players = await self.get_alive_players(model=game)
 
     async def run_day(
@@ -61,9 +73,36 @@ class GamesManager:
             game=game, players=players, remaining_time=remaining_time
         ):
             return True
-        game.current_day += 1
-        game.current_day_choices.clear()
-        await game.save()
+        await self.day_summary(game=game)
+
+    async def day_summary(self, game: GameModel) -> None:
+        deaths_today = await PlayerModel.filter(
+            game=game, is_alive=False, current_day=game.current_day
+        )
+
+        channel = self.client.get_channel(game.channel_id)
+        if len(deaths_today) == 0:
+            embeds = [
+                discord.Embed(
+                    title="There were no shots fired this night...",
+                    description="No one died. Is it luck, or some kind of tactic?",
+                    color=discord.Color.gold(),
+                )
+            ]
+        else:
+            embeds = [
+                discord.Embed(
+                    title="Cannon shots go off in the distance...",
+                    description=f"The following tributes have died today:",
+                    color=discord.Color.gold(),
+                ),
+                discord.Embed(
+                    description="\n".join([str(player) for player in deaths_today]),
+                    color=discord.Color.gold(),
+                ).set_footer(test="We'll see what the next day brings..."),
+            ]
+
+        await channel.send(f"Hunger Games **{game}**.", embeds=embeds)
 
     async def run_players_events(
         self, game: GameModel, players: list[PlayerModel], remaining_time: int
@@ -81,6 +120,8 @@ class GamesManager:
             player = await PlayerModel.get(id=player.id)
             if player.is_alive:
                 await self.player_event(game=game, player=player)
+                player.current_day = game.current_day
+                await player.save()
                 if await self.check_game_end(game=game):
                     return True
 
