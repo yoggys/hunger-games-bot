@@ -6,7 +6,6 @@ from discord.ext import commands
 from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
 from utils.models import GameModel, PlayerModel
-
 from utils.Paginator import Paginator
 
 
@@ -185,8 +184,29 @@ class HungerGames(commands.Cog):
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
 
+    def format_player(self, player: PlayerModel, winner: int) -> str:
+        if not player.is_alive:
+            return f"~~{player}~~ 💀 ```Died by {player.death_by}.```"
+
+        badges = []
+        if player.is_injured:
+            badges.append("`[ 🤕 Injured ]`")
+        if player.is_armored:
+            badges.append("`[ 🛡️ Armored ]`")
+        if player.is_protected:
+            badges.append("`[ 💉 Meds ]`")
+
+        return "{} {}\n{}".format(
+            player,
+            "👑" if player.user_id == winner else "❤️",
+            ("> " + " ".join(badges)) if badges else "",
+        )
+
+    def format_entry(self, index: int, player: PlayerModel, winner: int) -> str:
+        return f"{index + 1}. {self.format_player(player, winner)}"
+
     @commands.slash_command(description="Get more info about Hunger Game game.")
-    async def hggameinfo(
+    async def hginfo(
         self,
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to get more info."),
@@ -198,75 +218,48 @@ class HungerGames(commands.Cog):
         if not game.is_started:
             return await ctx.respond("❌ This game has not started yet.")
 
-        await game.fetch_related("players")
-
         players = await PlayerModel.filter(game=game).order_by(
             "-is_alive", "-current_day", "is_injured"
         )
 
-        alive_count = len(list(filter(lambda x: x.is_alive, players)))
+        if len(players) == 0:
+            return await ctx.respond("❌ This game has no players.")
+
+        alive_count = len([player for player in players if player.is_alive])
         dead_count = len(players) - alive_count
 
-        embeds = []
-        players_for_embed = 10
-
-        title_embed = discord.Embed(
-            title=f"Hunger Games #{game_id}",
-        )
-        title_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
-        title_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
-        title_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
-        title_embed.add_field(
-            name="Winner",
-            value=f"*` Waiting... `*" if not game.winner else f"<@{game.winner}>",
+        game_embed = discord.Embed(title=f"Hunger Games #{game_id}")
+        game_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
+        game_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
+        game_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
+        game_embed.set_thumbnail(
+            url="https://cdn.discordapp.com/attachments/927287671288655943/1116035382530805852/d9wlt8m-d450cd7d-9993-4483-a431-78b457bf0e3c.png"
         )
 
-        for i in range(0, len(players), players_for_embed):
-            part = players[i : i + players_for_embed]
+        if game.winner:
+            game_embed.add_field(name="Winner", value=f"<@{game.winner}>")
 
-            embeds.append(
-                [
-                    title_embed,
-                    discord.Embed(
-                        description="\n".join(
-                            [
-                                (
-                                    f"### {'Dead as of day ' if not part[player].is_alive else 'Day '}{part[player].current_day}\n"
-                                    if player == 0
-                                    or (
-                                        part[player].current_day
-                                        != part[player - 1].current_day
-                                    )
-                                    or (
-                                        part[player].is_alive
-                                        != part[player - 1].is_alive
-                                    )
-                                    else ""
-                                )
-                                + f"{'👑' if game.is_ended and (i == 0 and player == 0) else f'{i + player + 1}.'} {part[player]} {'💀' if not part[player].is_alive else ''}\n"
-                                + (
-                                    ("`Alive ❤️`{} {}".format('\n`Protected 💉`' if part[player].is_protected else ('\n`Injured 🤕`' if part[player].is_injured else ''), '`Armored 🛡️`' if part[player].is_armored else '') + "\n")
-                                    if part[player].is_alive
-                                    else f"```Killed by {part[player].death_by}```"
-                                )
-                                for player in range(len(part))
-                            ]
-                        ),
-                    ),
-                ]
-            )
+        embeds = [game_embed]
+        current_day = None
+        description = ""
+
+        for i in range(0, len(players), 10):
+            for player in players[i : i + 10]:
+                if player.current_day != current_day:
+                    current_day = player.current_day
+                    description += f"\n## Day {current_day}\n"
+
+                description += (
+                    f"{self.format_entry(players.index(player), player, game.winner)}\n"
+                )
+            embed = discord.Embed(description=description)
+            embeds.append(embed)
 
         if len(embeds) == 1:
             await ctx.respond(embeds=embeds[0], ephemeral=True)
         else:
             pages = Paginator(pages=embeds)
             await pages.respond(ctx.interaction, ephemeral=True)
-
-    @commands.slash_command(description="tst")
-    async def hgtest(self, ctx: discord.ApplicationContext) -> None:
-        pag = Paginator(pages=["a", "b", "c"])
-
-        await pag.respond(ctx.interaction, ephemeral=True)
 
 
 def setup(client):
