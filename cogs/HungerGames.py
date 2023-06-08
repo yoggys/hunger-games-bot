@@ -199,10 +199,10 @@ class HungerGames(commands.Cog):
         if player.is_protected:
             badges.append("`[ 💉 Meds ]`")
 
-        return "{} {}\n{}".format(
+        return "{} {}{}".format(
             player,
             "👑" if player.user_id == winner else "❤️",
-            ("> " + " ".join(badges)) if badges else "",
+            ("\n> " + " ".join(badges)) if badges else "",
         )
 
     def format_entry(self, index: int, player: PlayerModel, winner: int) -> str:
@@ -246,14 +246,16 @@ class HungerGames(commands.Cog):
         if game.winner:
             game_embed.add_field(name="Winner", value=f"<@{game.winner}>")
 
+        max_day = max([player.current_day for player in players])
         embeds = [game_embed]
         current_day = None
         description = ""
 
         for i in range(0, len(players), 10):
             for player in players[i : i + 10]:
-                if player.current_day != current_day:
-                    current_day = player.current_day
+                player_day = max_day if player.is_alive else player.current_day
+                if player_day != current_day:
+                    current_day = player_day
                     description += f"\n## Day {current_day}\n"
 
                 description += (
