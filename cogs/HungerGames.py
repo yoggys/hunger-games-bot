@@ -167,22 +167,25 @@ class HungerGames(commands.Cog):
         self,
         ctx: discord.ApplicationContext,
         players: discord.Option(int, "Number of players to create.") = 2,
+        instant: discord.Option(bool, "Instantly end days of the game.") = False,
     ) -> None:
         game = await GameModel.create(
             guild_id=ctx.guild.id,
             channel_id=ctx.channel.id,
             owner_id=ctx.author.id,
-            max_players=2,
+            day_length=0 if instant else 1,
             is_invite_only=True,
-            day_length=1,
             is_started=True,
         )
 
         for index in range(players):
             await PlayerModel.create(game=game, user_id=index)
 
-        asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
+        await self.GamesManager.run_game(game=game)
+        
+        await PlayerModel.filter(game=game).delete()
+        await game.delete()
 
     def format_player(self, player: PlayerModel, winner: int) -> str:
         if not player.is_alive:
