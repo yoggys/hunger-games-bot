@@ -240,7 +240,7 @@ class HungerGames(commands.Cog):
         game_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
         game_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
         game_embed.set_thumbnail(
-            url="https://cdn.discordapp.com/attachments/927287671288655943/1116035382530805852/d9wlt8m-d450cd7d-9993-4483-a431-78b457bf0e3c.png"
+            url="https://cdn.discordapp.com/attachments/704387250351243425/1116424425722613790/logo-hgb.png"
         )
 
         if game.winner:
