@@ -45,6 +45,7 @@ async def wild_animals(**kwargs) -> Event:
         event.text = random.choice(wild_animals_texts).format(player)
         event.text += f"\nSadly, {player} didn't survive."
 
+        player.death_by = "wild animals"
         player.is_alive = False
 
     await player.save()
@@ -74,6 +75,7 @@ async def poisonous(**kwargs) -> Event:
             player.is_injured = True
         else:
             event.text += f"\nSadly poison was too strong for {player}."
+            player.death_by = "poison"
             player.is_alive = False
 
     await player.save()
@@ -125,6 +127,7 @@ async def chest(**kwargs) -> Event:
             player.is_armored = False
 
         else:
+            player.death_by = "explosion"
             player.is_alive = False
 
     await player.save()

@@ -6,6 +6,7 @@ from discord.ext import commands
 from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
 from utils.models import GameModel, PlayerModel
+from utils.Paginator import Paginator
 
 
 class HungerGames(commands.Cog):
@@ -174,6 +175,7 @@ class HungerGames(commands.Cog):
             max_players=2,
             is_invite_only=True,
             day_length=1,
+            is_started=True,
         )
 
         for index in range(players):
@@ -181,6 +183,85 @@ class HungerGames(commands.Cog):
 
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
         await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
+
+    def format_player(self, player: PlayerModel, winner: int) -> str:
+        if not player.is_alive:
+            return f"~~{player}~~ 💀 ```Died by {player.death_by}.```"
+
+        badges = []
+        if player.is_injured:
+            badges.append("`[ 🤕 Injured ]`")
+        if player.is_armored:
+            badges.append("`[ 🛡️ Armored ]`")
+        if player.is_protected:
+            badges.append("`[ 💉 Meds ]`")
+
+        return "{} {}\n{}".format(
+            player,
+            "👑" if player.user_id == winner else "❤️",
+            ("> " + " ".join(badges)) if badges else "",
+        )
+
+    def format_entry(self, index: int, player: PlayerModel, winner: int) -> str:
+        return f"{index + 1}. {self.format_player(player, winner)}"
+
+    @commands.slash_command(description="Get more info about Hunger Game game.")
+    async def hginfo(
+        self,
+        ctx: discord.ApplicationContext,
+        game_id: discord.Option(int, "Game ID to get more info."),
+    ) -> None:
+        game = await GameModel.get_or_none(id=game_id)
+        if not game:
+            return await ctx.respond("❌ Game not found.")
+
+        players = await PlayerModel.filter(game=game).order_by(
+            "-is_alive", "-current_day", "is_injured"
+        )
+
+        if not game.is_started:
+            return await ctx.respond(
+                f"❌ This game has not started yet ({len(players)}/{game.max_players})."
+            )
+
+        if len(players) == 0:
+            return await ctx.respond("❌ This game has no players.")
+
+        alive_count = len([player for player in players if player.is_alive])
+        dead_count = len(players) - alive_count
+
+        game_embed = discord.Embed(title=f"Hunger Games #{game_id}")
+        game_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
+        game_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
+        game_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
+        game_embed.set_thumbnail(
+            url="https://cdn.discordapp.com/attachments/927287671288655943/1116035382530805852/d9wlt8m-d450cd7d-9993-4483-a431-78b457bf0e3c.png"
+        )
+
+        if game.winner:
+            game_embed.add_field(name="Winner", value=f"<@{game.winner}>")
+
+        embeds = [game_embed]
+        current_day = None
+        description = ""
+
+        for i in range(0, len(players), 10):
+            for player in players[i : i + 10]:
+                if player.current_day != current_day:
+                    current_day = player.current_day
+                    description += f"\n## Day {current_day}\n"
+
+                description += (
+                    f"{self.format_entry(players.index(player), player, game.winner)}\n"
+                )
+            embed = discord.Embed(description=description)
+            embeds.append(embed)
+
+        if len(embeds) == 1:
+            await ctx.respond(embeds=embeds[0], ephemeral=True)
+        else:
+            pages = Paginator(pages=embeds)
+            await pages.respond(ctx.interaction, ephemeral=True)
 
 
 def setup(client):
