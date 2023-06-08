@@ -81,25 +81,28 @@ class GamesManager:
         )
 
         channel = self.client.get_channel(game.channel_id)
+        color = {"color": discord.Color.from_rgb(0, 0, 0)}
         if len(deaths_today) == 0:
             embeds = [
                 discord.Embed(
                     title="There were no shots fired this night...",
                     description="No one died. Is it luck, or some kind of tactic?",
-                    color=discord.Color.gold(),
+                    **color,
                 )
             ]
         else:
+            day_data = [
+                f"{player} died by {player.death_by}" for player in deaths_today
+            ]
             embeds = [
                 discord.Embed(
                     title="Cannon shots go off in the distance...",
                     description=f"The following tributes have died today:",
-                    color=discord.Color.gold(),
+                    **color,
                 ),
-                discord.Embed(
-                    description="\n".join([str(player) for player in deaths_today]),
-                    color=discord.Color.gold(),
-                ).set_footer(text="We'll see what the next day brings..."),
+                discord.Embed(description="\n".join(day_data), **color).set_footer(
+                    text="We'll see what the next day brings..."
+                ),
             ]
 
         await channel.send(f"Hunger Games **{game}**.", embeds=embeds)
@@ -155,10 +158,19 @@ class GamesManager:
         """End the game."""
         winner = await PlayerModel.get(game=game, is_alive=True)
 
+        if winner.current_day != game.current_day:
+            winner.current_day = game.current_day
+            await winner.save()
+
         game.is_ended = True
         game.winner = winner.user_id
 
         await game.save()
 
+        embed = discord.Embed(
+            title=f"Hunger Games {game}",
+            description=f"🎉 {winner} won the **{game}** Hunger Games!",
+            color=discord.Color.gold(),
+        )
         channel = self.client.get_channel(game.channel_id)
-        return await channel.send(f"🎉 {winner} won the **{game}** Hunger Games!")
+        return await channel.send(winner, embed=embed)

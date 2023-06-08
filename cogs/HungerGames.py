@@ -183,13 +183,13 @@ class HungerGames(commands.Cog):
 
         await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
         await self.GamesManager.run_game(game=game)
-        
+
         await PlayerModel.filter(game=game).delete()
         await game.delete()
 
     def format_player(self, player: PlayerModel, winner: int) -> str:
         if not player.is_alive:
-            return f"~~{player}~~ 💀 ```Died by {player.death_by}.```"
+            return f"~~{player}~~ 💀\n> ` Died by {player.death_by}. `"
 
         badges = []
         if player.is_injured:
@@ -233,7 +233,9 @@ class HungerGames(commands.Cog):
         alive_count = len([player for player in players if player.is_alive])
         dead_count = len(players) - alive_count
 
-        game_embed = discord.Embed(title=f"Hunger Games #{game_id}")
+        game_embed = discord.Embed(
+            title=f"Hunger Games #{game_id}", color=discord.Color.gold()
+        )
         game_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
         game_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
         game_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
@@ -257,7 +259,7 @@ class HungerGames(commands.Cog):
                 description += (
                     f"{self.format_entry(players.index(player), player, game.winner)}\n"
                 )
-            embed = discord.Embed(description=description)
+            embed = discord.Embed(description=description, color=discord.Color.gold())
             embeds.append(embed)
 
         if len(embeds) == 1:
