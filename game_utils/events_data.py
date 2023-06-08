@@ -44,7 +44,7 @@ async def wild_animals(**kwargs) -> Event:
         event._type = EventType.NEGATIVE
         event.text = random.choice(wild_animals_texts).format(player)
         event.text += f"\nSadly, {player} didn't survive."
-        
+
         player.death_by = "wild animals"
         player.is_alive = False
 

@@ -215,12 +215,14 @@ class HungerGames(commands.Cog):
         if not game:
             return await ctx.respond("❌ Game not found.")
 
-        if not game.is_started:
-            return await ctx.respond("❌ This game has not started yet.")
-
         players = await PlayerModel.filter(game=game).order_by(
             "-is_alive", "-current_day", "is_injured"
         )
+
+        if not game.is_started:
+            return await ctx.respond(
+                f"❌ This game has not started yet ({len(players)}/{game.max_players})."
+            )
 
         if len(players) == 0:
             return await ctx.respond("❌ This game has no players.")
