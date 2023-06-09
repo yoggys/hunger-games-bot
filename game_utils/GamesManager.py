@@ -220,6 +220,8 @@ class GamesManager:
         Callback for when a game ends.
         Example usage:
         - You can give the winner a role here.
-        - For connecting to a database on your server/bot, you can refer to examples/own_database.py.
+        - You can access your database here to update the winner's stats.
+        - To receive an event on the server/bot, and then at your preference,
+            for example, use your own database, you can refer to examples/receive_event.py.
         """
         pass
