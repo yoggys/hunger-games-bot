@@ -72,9 +72,15 @@ class GamesManager:
     async def send_start_info(self, game: GameModel) -> None:
         channel = self.client.get_channel(game.channel_id)
 
+        players = [str(player) for player in game.players if player.user_id > 1000]
+        description = "\n".join(players)
+
+        bot_count = len(game.players) - len(players)
+        if bot_count != 0:
+            description += f"\n\n> **There are {bot_count} bot(s) in the game.**"
+
         embed = discord.Embed(
-            title=f"The {game} Hunger Games has started!",
-            description="\n".join([str(player) for player in game.players]),
+            title=f"The {game} Hunger Games has started!", description=description
         )
         await channel.send(embed=embed)
 
