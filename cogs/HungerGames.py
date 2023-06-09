@@ -2,6 +2,7 @@ import asyncio
 
 import discord
 from discord.ext import commands
+from tortoise.queryset import Q
 
 from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
@@ -177,32 +178,6 @@ class HungerGames(commands.Cog):
         await ctx.respond(f"✅ The game **{game}** has started.")
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
 
-    @commands.slash_command(description="Create and start a Hunger Games game.")
-    @commands.is_owner()
-    async def hgdebug(
-        self,
-        ctx: discord.ApplicationContext,
-        players: discord.Option(int, "Number of players to create.") = 2,
-        instant: discord.Option(bool, "Instantly end days of the game.") = False,
-    ) -> None:
-        game = await GameModel.create(
-            guild_id=ctx.guild.id,
-            channel_id=ctx.channel.id,
-            owner_id=ctx.author.id,
-            day_length=0 if instant else 1,
-            is_invite_only=True,
-            is_started=True,
-        )
-
-        for index in range(players):
-            await PlayerModel.create(game=game, user_id=index)
-
-        await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
-        await self.GamesManager.run_game(game=game)
-
-        await PlayerModel.filter(game=game).delete()
-        await game.delete()
-
     def format_player(self, player: PlayerModel, winner: int) -> str:
         if not player.is_alive:
             return f"~~{player}~~ 💀\n> ` Died by {player.death_by}. `"
@@ -261,7 +236,12 @@ class HungerGames(commands.Cog):
         )
 
         if game.winner:
-            game_embed.add_field(name="Winner", value=f"<@{game.winner}>")
+            game_embed.add_field(
+                name="Winner",
+                value=f"<@{game.winner}>"
+                if game.winner > 0
+                else f"` Bot #{game.winner}`",
+            )
 
         max_day = max([player.current_day for player in players])
         embeds = [game_embed]
@@ -287,6 +267,32 @@ class HungerGames(commands.Cog):
             pages = Paginator(pages=embeds)
             await pages.respond(ctx.interaction, ephemeral=True)
 
+    @commands.slash_command(description="Create and start a Hunger Games game.")
+    @commands.is_owner()
+    async def hgdebug(
+        self,
+        ctx: discord.ApplicationContext,
+        players: discord.Option(int, "Number of players to create.") = 2,
+        instant: discord.Option(bool, "Instantly end days of the game.") = False,
+    ) -> None:
+        game = await GameModel.create(
+            guild_id=ctx.guild.id,
+            channel_id=ctx.channel.id,
+            owner_id=ctx.author.id,
+            day_length=0 if instant else 1,
+            is_invite_only=True,
+            is_started=True,
+        )
+
+        for index in range(players):
+            await PlayerModel.create(game=game, user_id=index)
+
+        await ctx.respond(f"✅ Done - **{game}** with **{players}** players.")
+        await self.GamesManager.run_game(game=game)
+
+        await PlayerModel.filter(game=game).delete()
+        await game.delete()
+
     @commands.slash_command(description="Fill game with bots.")
     @commands.is_owner()
     async def hgbots(
@@ -298,15 +304,30 @@ class HungerGames(commands.Cog):
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
-        
+
         if game.is_started:
             await ctx.respond("❌ Game has already started.", ephemeral=True)
-        
+
         await ctx.defer(ephemeral=True)
-            
-        for index in range(count):
+
+        count += 1
+        if (
+            model := await PlayerModel.filter(Q(game=game) & Q(user_id__lte=1000))
+            .order_by("-id")
+            .first()
+        ):
+            max_id = model.id
+            count = count + model.user_id
+        else:
+            max_id = 1
+
+        for index in range(max_id, count):
             await PlayerModel.create(game=game, user_id=index)
-            
-        await ctx.respond(f"✅ Added **{count}** bots to **{game}**.", ephemeral=True)
+
+        await ctx.respond(
+            f"✅ Added **{count-max_id}** bots to **{game}**.", ephemeral=True
+        )
+
+
 def setup(client):
     client.add_cog(HungerGames(client))

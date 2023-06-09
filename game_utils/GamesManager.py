@@ -50,6 +50,10 @@ class GamesManager:
         if any([player.current_day < game.current_day for player in players]):
             players = await self.get_alive_players(model=game, restart=True)
 
+        await game.fetch_related("players")
+        if len(game.players) == len(players):
+            await self.send_start_info(game=game)
+
         while len(players) > 1:
             random.shuffle(players)
             if await self.run_day(
@@ -64,6 +68,15 @@ class GamesManager:
             await game.save()
 
             players = await self.get_alive_players(model=game)
+
+    async def send_start_info(self, game: GameModel) -> None:
+        channel = self.client.get_channel(game.channel_id)
+
+        embed = discord.Embed(
+            title=f"The {game} Hunger Games has started!",
+            description="\n".join([str(player) for player in game.players]),
+        )
+        await channel.send(embed=embed)
 
     async def run_day(
         self, game: GameModel, players: list[PlayerModel], remaining_time: int
