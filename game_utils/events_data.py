@@ -91,7 +91,7 @@ async def poisonous(**kwargs) -> Event:
     else:
         event._type = EventType.NEGATIVE
 
-        if random.randint(0, 1):
+        if not player.is_injured and random.randint(0, 1):
             event.text += f"\n{player} starts feeling unwell, experiencing the effects of the poison."
             player.is_injured = True
         else:
@@ -122,7 +122,7 @@ async def chest(**kwargs) -> Event:
             event.text = good_loot_texts[0].format(player)
         else:
             loot = random.randint(1, 2)
-            event.text = good_loot_texts[loot]
+            event.text = good_loot_texts[loot].format(player)
 
             if loot == 1 and not player.is_armored:
                 player.is_armored = True
