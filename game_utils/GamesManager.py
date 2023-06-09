@@ -83,16 +83,26 @@ class GamesManager:
         channel = self.client.get_channel(game.channel_id)
         color = {"color": discord.Color.from_rgb(0, 0, 0)}
         if len(deaths_today) == 0:
+            descriptions = [
+                "A quiet night enveloped the arena as the moonlight danced upon the motionless bodies. No lives were claimed, leaving the tributes to ponder their next move.",
+                "Silence echoes through the arena as the night passes without any bloodshed. The tributes remain locked in a tense stalemate, testing the limits of their strategies.",
+                "In a surprising turn of events, the night remains peaceful as no one falls victim to the darkness. The tributes cautiously navigate the arena, each waiting for the perfect opportunity.",
+                "The absence of gunfire heralds a night of reprieve for the tributes. They lie in wait, each contemplating their survival strategies amidst the uncertainty.",
+                "A night of eerie stillness descends upon the arena. No lives are claimed, leaving the tributes to question whether this is a moment of respite or a calm before the storm.",
+                "As dawn breaks, it becomes clear that the night passed without a single casualty. The tributes must reevaluate their plans, searching for weaknesses or hidden alliances.",
+                "The arena remains untouched by the grim hand of death. The tributes, uncertain of the reasons behind this tranquility, grow increasingly cautious in their actions.",
+                "The night brings no loss of life, confounding both the tributes and the spectators. The tension mounts as they wonder if this is a testament to their ingenuity or simply an anomaly.",
+            ]
             embeds = [
                 discord.Embed(
                     title="There were no shots fired this night...",
-                    description="No one died. Is it luck, or some kind of tactic?",
+                    description=random.choice(descriptions),
                     **color,
                 )
             ]
         else:
             day_data = [
-                f"{player} died by {player.death_by}" for player in deaths_today
+                f"{player} died by {player.death_by}." for player in deaths_today
             ]
             embeds = [
                 discord.Embed(
