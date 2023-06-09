@@ -158,6 +158,51 @@ async def chest(**kwargs) -> Event:
     return event
 
 
+async def sponsors(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    event._type = EventType.POSITIVE
+
+    if player.is_injured:
+        sponsors_heal_descriptions = [
+            "{} receives a sponsor package containing medicines that healed them."
+        ]
+
+        player.is_injured = False
+
+        event.text = random.choice(sponsors_heal_descriptions).format(player)
+
+    else:
+        if not player.is_armored:
+            sponsors_armor_descriptions = [
+                "Thanks to the generosity of sponsors, a set of armor appears on {}'s path.",
+                "Along with the sponsor pack, {} receives a shield that effectively protects against enemy attacks.",
+                "In return for {}'s impressive skills, sponsors are providing a special cape that provides additional camouflage and protection.",
+            ]
+            event.text = random.choice(sponsors_armor_descriptions).format(player)
+
+            player.is_armored = True
+        elif not player.is_protected:
+            sponsors_meds_descriptions = [
+                "Sponsors send {} a first aid kit that can save life in dangerous situations.",
+                "The district sent {} a set of pills.",
+            ]
+            event.text = random.choice(sponsors_meds_descriptions).format(player)
+
+            player.is_protected = True
+        else:
+            sponsors_passive_descriptions = [
+                "A package of food is received by {} from sponsors, ensuring survival without succumbing to hunger.",
+                "Along with the sponsor package, for {}, comes a map that facilitates navigation in the arena.",
+            ]
+            event._type = EventType.PASSIVE
+            event.text = random.choice(sponsors_passive_descriptions).format(player)
+
+    await player.save()
+
+    return event
+
+
 # ...
 
 
@@ -167,6 +212,7 @@ event_list: list[Event] = [
     Event(weight=1, callback=wild_animals),
     Event(weight=1, callback=poisonous),
     Event(weight=1, callback=chest),
+    Event(weight=1, callback=sponsors),
 ]
 events_weights = [event.weight for event in event_list]
 
