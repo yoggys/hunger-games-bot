@@ -165,7 +165,9 @@ async def sponsors(**kwargs) -> Event:
 
     if player.is_injured:
         sponsors_heal_descriptions = [
-            "{} receives a sponsor package containing medicines that healed them."
+            "{} receives a sponsor package containing medicine that miraculously heals their injuries.",
+            "In a stroke of luck, sponsors send {} a healing potion, mending their wounds.",
+            "{} is blessed by sponsors with medicine that quickly mends their injuries.",
         ]
 
         player.is_injured = False
@@ -175,25 +177,27 @@ async def sponsors(**kwargs) -> Event:
     else:
         if not player.is_armored:
             sponsors_armor_descriptions = [
-                "Thanks to the generosity of sponsors, a set of armor appears on {}'s path.",
-                "Along with the sponsor pack, {} receives a shield that effectively protects against enemy attacks.",
-                "In return for {}'s impressive skills, sponsors are providing a special cape that provides additional camouflage and protection.",
+                "Thanks to the generosity of sponsors, a set of armor materializes before {}, offering formidable protection against enemy attacks.",
+                "In recognition of {}, sponsors send a special suit of armor, enhancing their chances of survival.",
+                "{} is granted a gift from sponsors: a sturdy shield that provides unparalleled defense in the arena.",
             ]
             event.text = random.choice(sponsors_armor_descriptions).format(player)
 
             player.is_armored = True
         elif not player.is_protected:
             sponsors_meds_descriptions = [
-                "Sponsors send {} a first aid kit that can save life in dangerous situations.",
-                "The district sent {} a set of pills.",
+                "Sponsors send {} a first aid kit, equipping them with life-saving supplies in dangerous situations.",
+                "The district sends {} a set of potent pills, ensuring they have the means to overcome adversity.",
+                "{} receives a medical package from sponsors, containing essential supplies for survival in the harsh arena.",
             ]
             event.text = random.choice(sponsors_meds_descriptions).format(player)
 
             player.is_protected = True
         else:
             sponsors_passive_descriptions = [
-                "A package of food is received by {} from sponsors, ensuring survival without succumbing to hunger.",
-                "Along with the sponsor package, for {}, comes a map that facilitates navigation in the arena.",
+                "A generous sponsor delivers a package of nourishing food to {}, preventing hunger from becoming a threat.",
+                "Accompanying the sponsor package, {} receives a detailed map that enhances their navigation skills in the treacherous arena.",
+                "Sponsors provide {} with essential supplies, including clean water and additional resources for an extended stay in the arena.",
             ]
             event._type = EventType.PASSIVE
             event.text = random.choice(sponsors_passive_descriptions).format(player)
@@ -201,6 +205,7 @@ async def sponsors(**kwargs) -> Event:
     await player.save()
 
     return event
+
 
 
 # ...
