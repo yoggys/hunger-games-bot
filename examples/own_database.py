@@ -11,7 +11,7 @@ async def winner_callback(self, winner: PlayerModel) -> str:
     ENDPOINT = "..."
 
     async with aiohttp.ClientSession() as cs:
-        async with cs.post(ENDPOINT, data={"winner_id": winner}) as res:
+        async with cs.post(ENDPOINT, data={"winner_id": winner.user_id}) as res:
             return await res.text()
 
 
@@ -24,5 +24,5 @@ async def winner_callback(self, winner: PlayerModel) -> None:
     ENDPOINT = "..."
 
     async with websockets.connect(f"wss://{ENDPOINT}") as ws:
-        await ws.send(json.dumps({"winner_id": winner}))
+        await ws.send(json.dumps({"winner_id": winner.user_id}))
         return await ws.recv()
