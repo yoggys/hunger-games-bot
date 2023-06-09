@@ -20,7 +20,7 @@ import websockets
 import json
 
 
-async def winner_callback(self, winner: PlayerModel) -> None:
+async def winner_callback(self, winner: PlayerModel) -> str:
     ENDPOINT = "..."
 
     async with websockets.connect(f"wss://{ENDPOINT}") as ws:
