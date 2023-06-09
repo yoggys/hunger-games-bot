@@ -31,7 +31,9 @@ class HungerGames(commands.Cog):
         ) = None,
     ) -> None:
         if max_players < 2 or max_players > 24:
-            return await ctx.respond("❌ Maximum players must be between 2 and 24.", ephemeral=True)
+            return await ctx.respond(
+                "❌ Maximum players must be between 2 and 24.", ephemeral=True
+            )
 
         channel = channel or ctx.channel
         game = await GameModel.create(
@@ -76,20 +78,28 @@ class HungerGames(commands.Cog):
             return await ctx.respond("❌ This game is not private.", ephemeral=True)
 
         if game.owner_id != ctx.author.id:
-            return await ctx.respond("❌ You are not the owner of this game.", ephemeral=True)
+            return await ctx.respond(
+                "❌ You are not the owner of this game.", ephemeral=True
+            )
 
         if game.is_started:
             return await ctx.respond("❌ This game has already started.", ephemeral=True)
 
         if member.bot:
-            return await ctx.respond("❌ You cannot invite bots to a game.", ephemeral=True)
+            return await ctx.respond(
+                "❌ You cannot invite bots to a game.", ephemeral=True
+            )
 
         if member.id in game.invited_users:
-            return await ctx.respond("❌ This player has already been invited.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This player has already been invited.", ephemeral=True
+            )
 
         await game.fetch_related("players")
         if member.id in [player.user_id for player in game.players]:
-            return await ctx.respond("❌ This player is already in the game.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This player is already in the game.", ephemeral=True
+            )
 
         if len(game.players) >= game.max_players:
             return await ctx.respond("❌ This game is full.", ephemeral=True)
@@ -119,7 +129,9 @@ class HungerGames(commands.Cog):
             and ctx.author.id not in game.invited_users
             and game.owner_id != ctx.author.id
         ):
-            return await ctx.respond("❌ You are not invited to this game.", ephemeral=True)
+            return await ctx.respond(
+                "❌ You are not invited to this game.", ephemeral=True
+            )
 
         await game.fetch_related("players")
         if ctx.author.id in [player.user_id for player in game.players]:
@@ -146,14 +158,18 @@ class HungerGames(commands.Cog):
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
         if game.owner_id != ctx.author.id:
-            return await ctx.respond("❌ You are not the owner of this game.", ephemeral=True)
+            return await ctx.respond(
+                "❌ You are not the owner of this game.", ephemeral=True
+            )
 
         if game.is_started:
             return await ctx.respond("❌ This game has already started.", ephemeral=True)
 
         await game.fetch_related("players")
         if len(game.players) < 2:
-            return await ctx.respond("❌ This game does not have enough players.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This game does not have enough players.", ephemeral=True
+            )
 
         game.is_started = True
         await game.save()
@@ -224,7 +240,8 @@ class HungerGames(commands.Cog):
 
         if not game.is_started:
             return await ctx.respond(
-                f"❌ This game has not started yet ({len(players)}/{game.max_players}).", ephemeral=True
+                f"❌ This game has not started yet ({len(players)}/{game.max_players}).",
+                ephemeral=True,
             )
 
         if len(players) == 0:
