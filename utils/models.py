@@ -53,4 +53,4 @@ class PlayerModel(BaseModel):
     death_by = fields.CharField(max_length=256, null=True)
 
     def __str__(self) -> str:
-        return f"<@{self.user_id}>"
+        return f"`Bot #{self.id}`" if self.user_id < 100 else f"<@{self.user_id}>"

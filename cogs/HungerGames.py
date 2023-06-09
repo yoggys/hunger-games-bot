@@ -287,6 +287,26 @@ class HungerGames(commands.Cog):
             pages = Paginator(pages=embeds)
             await pages.respond(ctx.interaction, ephemeral=True)
 
-
+    @commands.slash_command(description="Fill game with bots.")
+    @commands.is_owner()
+    async def hgbots(
+        self,
+        ctx: discord.ApplicationContext,
+        game_id: discord.Option(int, "Game ID."),
+        count: discord.Option(int, "Number of bots to create.") = 1,
+    ) -> None:
+        game = await GameModel.get_or_none(id=game_id)
+        if not game:
+            return await ctx.respond("❌ Game not found.", ephemeral=True)
+        
+        if game.is_started:
+            await ctx.respond("❌ Game has already started.", ephemeral=True)
+        
+        await ctx.defer(ephemeral=True)
+            
+        for index in range(count):
+            await PlayerModel.create(game=game, user_id=index)
+            
+        await ctx.respond(f"✅ Added **{count}** bots to **{game}**.", ephemeral=True)
 def setup(client):
     client.add_cog(HungerGames(client))
