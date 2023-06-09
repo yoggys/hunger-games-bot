@@ -23,27 +23,44 @@ def init_utils(**kwargs) -> tuple[GameModel, PlayerModel, Event]:
 async def nothing(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    nothing_texts: list[str] = ["{} didn't do anything interesting today."]
+    nothing_descriptions = [
+        "{} spent the day without any noteworthy events.",
+        "The day passed uneventfully for {} as they went about their routine.",
+        "No significant incidents occurred in {}'s day, leaving them to reflect on their strategies.",
+        "A quiet day unfolded for {}, devoid of any remarkable occurrences.",
+        "{} found themselves in a state of idleness as the hours slipped away without event.",
+        "The arena remained undisturbed for {}, granting them a day of respite from the chaos.",
+        "As the sun set on another day, {} found themselves caught in the monotony of survival.",
+    ]
+
     event._type = EventType.PASSIVE
-    event.text = random.choice(nothing_texts).format(player)
+    event.text = random.choice(nothing_descriptions).format(player)
     return event
 
 
 async def wild_animals(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    wild_animals_texts: list[str] = ["{} got into a fight with a wild animal."]
+    wild_animals_descriptions = [
+        "{} encountered a fierce wild animal and engaged in a brutal fight.",
+        "A terrifying encounter with a wild animal left {} in a life-or-death struggle.",
+        "{} found themselves face to face with a ferocious beast, resulting in a violent confrontation.",
+        "The tranquility of the arena was shattered for {} as they became entangled in a deadly battle with a wild animal.",
+        "In a harrowing turn of events, {} crossed paths with a dangerous creature, leading to a desperate fight for survival.",
+        "The serenity of the day was shattered when {} faced off against a savage wild animal, their skills put to the ultimate test.",
+    ]
 
+    event.text = random.choice(wild_animals_descriptions).format(player)
     if player.is_armored:
         event._type = EventType.POSITIVE
-        event.text = random.choice(wild_animals_texts).format(player)
         event.text += f"\nLuckily, {player} survived the fight due to their armor."
 
         player.is_armored = False
     else:
         event._type = EventType.NEGATIVE
-        event.text = random.choice(wild_animals_texts).format(player)
-        event.text += f"\nSadly, {player} didn't survive."
+        event.text += (
+            f"\nSadly, {player} couldn't overcome the ferocity of the wild animal."
+        )
 
         player.death_by = "wild animals"
         player.is_alive = False
@@ -55,26 +72,32 @@ async def wild_animals(**kwargs) -> Event:
 async def poisonous(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    poisonous_texts: list[str] = [
-        "{} decided to eat some berries, but they were poisonous."
+    poisonous_descriptions = [
+        "{} made the unfortunate choice of consuming poisonous berries, leading to dire consequences.",
+        "In a moment of hunger, {} ingested toxic plants, suffering the effects of their poisonous nature.",
+        "{} fell victim to the deadly allure of seemingly harmless berries, only to be poisoned by their toxicity.",
+        "The tempting appearance of berries led {} astray, as the poison within took a toll on their body.",
+        "Unbeknownst to {}, the seemingly edible vegetation they consumed turned out to be lethal, poisoning their system.",
+        "A fatal mistake was made by {}, who unknowingly consumed a lethal dose of poisonous substance.",
     ]
 
+    event.text = random.choice(poisonous_descriptions).format(player)
     if player.is_protected:
         event._type = EventType.POSITIVE
-        event.text = random.choice(poisonous_texts).format(player)
         event.text += f"\nLuckily, {player} survived due to their medicines."
 
         player.is_protected = False
 
     else:
         event._type = EventType.NEGATIVE
-        event.text = random.choice(poisonous_texts).format(player)
 
-        if random.choice([True, False]):
-            event.text += f"\n{player} don't feel so good."
+        if random.randint(0, 1):
+            event.text += f"\n{player} starts feeling unwell, experiencing the effects of the poison."
             player.is_injured = True
         else:
-            event.text += f"\nSadly poison was too strong for {player}."
+            event.text += (
+                f"\nSadly, the poison overwhelms {player} and claims their life."
+            )
             player.death_by = "poison"
             player.is_alive = False
 
@@ -85,47 +108,47 @@ async def poisonous(**kwargs) -> Event:
 async def chest(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
-    loot = random.randint(1, 3)
+    if random.randint(0, 1):
+        good_loot_texts = [
+            "{} found a chest containing medicine that healed them.",
+            "{} discovered a chest and acquired armor.",
+            "{} obtained medicine from a chest, boosting their chances of survival.",
+        ]
 
-    if loot % 3:
-        good_loot_text = ["{} found a chest {}"]
         event._type = EventType.POSITIVE
 
         if player.is_injured:
             player.is_injured = False
-            event.text = random.choice(good_loot_text).format(
-                player, "of medicine that healed him."
-            )
-
+            event.text = good_loot_texts[0].format(player)
         else:
-            event.text = random.choice(good_loot_text).format(
-                player, "with " + ("armor." if loot == 1 else "medicine.")
-            )
+            loot = random.randint(1, 2)
+            event.text = good_loot_texts[loot]
 
             if loot == 1 and not player.is_armored:
                 player.is_armored = True
-            elif not player.is_protected:
+            elif loot == 2 and not player.is_protected:
                 player.is_protected = True
             else:
                 event._type = EventType.PASSIVE
-                event.text += "\n{} already had it so nothing has changed.".format(
-                    player
+                event.text += (
+                    f"\nHowever, {player} already had it, so nothing has changed."
                 )
 
     else:
-        bad_loot_text = ["{} found a chest that turned out to be an exploding trap."]
+        bad_loot_texts = [
+            "{} opened a chest that turned out to be an exploding trap.",
+            "A treacherous chest caught {} off guard, triggering an explosive trap.",
+            "The excitement of finding a chest quickly turned into danger for {} as it detonated.",
+        ]
         event._type = EventType.NEGATIVE
 
-        event.text = random.choice(bad_loot_text).format(player)
+        event.text = random.choice(bad_loot_texts).format(player)
 
         if player.is_armored:
             event._type = EventType.PASSIVE
-            event.text += (
-                "\nFortunately, the life of {} was saved by the armor.".format(player)
-            )
+            event.text += f"\nFortunately, the armor saved {player}'s life."
 
             player.is_armored = False
-
         else:
             player.death_by = "explosion"
             player.is_alive = False
@@ -140,7 +163,7 @@ async def chest(**kwargs) -> Event:
 
 # Event list
 event_list: list[Event] = [
-    Event(weight=1, callback=nothing),
+    Event(weight=2, callback=nothing),
     Event(weight=1, callback=wild_animals),
     Event(weight=1, callback=poisonous),
     Event(weight=1, callback=chest),

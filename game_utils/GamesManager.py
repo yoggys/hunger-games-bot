@@ -83,7 +83,7 @@ class GamesManager:
         channel = self.client.get_channel(game.channel_id)
         color = {"color": discord.Color.from_rgb(0, 0, 0)}
         if len(deaths_today) == 0:
-            descriptions = [
+            alive_descriptions = [
                 "A quiet night enveloped the arena as the moonlight danced upon the motionless bodies. No lives were claimed, leaving the tributes to ponder their next move.",
                 "Silence echoes through the arena as the night passes without any bloodshed. The tributes remain locked in a tense stalemate, testing the limits of their strategies.",
                 "In a surprising turn of events, the night remains peaceful as no one falls victim to the darkness. The tributes cautiously navigate the arena, each waiting for the perfect opportunity.",
@@ -96,11 +96,21 @@ class GamesManager:
             embeds = [
                 discord.Embed(
                     title="There were no shots fired this night...",
-                    description=random.choice(descriptions),
+                    description=random.choice(alive_descriptions),
                     **color,
                 )
             ]
         else:
+            death_descriptions = [
+                "Another tribute has fallen, their fate sealed by a merciless force.",
+                "The arena claims yet another life, leaving the remaining tributes in a state of heightened vigilance.",
+                "A life is extinguished, a reminder of the cruel reality that engulfs the Hunger Games.",
+                "The echoes of a fallen tribute reverberate through the arena, a haunting testament to the brutality of this deadly game.",
+                "A tribute's journey comes to a tragic end, leaving a void that cannot be filled.",
+                "In the face of relentless odds, a tribute succumbs to the ruthless forces at play.",
+                "The Games claim another victim, their memory forever etched in the minds of those who remain.",
+                "A tribute's light is extinguished, their story left unfinished in the annals of the Hunger Games.",
+            ]
             day_data = [
                 f"{player} died by {player.death_by}." for player in deaths_today
             ]
@@ -111,7 +121,7 @@ class GamesManager:
                     **color,
                 ),
                 discord.Embed(description="\n".join(day_data), **color).set_footer(
-                    text="We'll see what the next day brings..."
+                    text=random.choice(death_descriptions)
                 ),
             ]
 
