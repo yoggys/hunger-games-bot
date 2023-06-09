@@ -213,11 +213,11 @@ async def sponsors(**kwargs) -> Event:
 
 # Event list
 event_list: list[Event] = [
-    Event(weight=2, callback=nothing),
-    Event(weight=1, callback=wild_animals),
-    Event(weight=1, callback=poisonous),
-    Event(weight=1, callback=chest),
-    Event(weight=1, callback=sponsors),
+    Event(weight=20, callback=nothing),
+    Event(weight=10, callback=wild_animals),
+    Event(weight=5, callback=poisonous),
+    Event(weight=10, callback=chest),
+    Event(weight=5, callback=sponsors),
 ]
 events_weights = [event.weight for event in event_list]
 
