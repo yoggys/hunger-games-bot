@@ -205,6 +205,7 @@ class GamesManager:
         game.winner = winner.user_id
 
         await game.save()
+        await self.winner_callback(winner=winner)
 
         embed = discord.Embed(
             title=f"Hunger Games {game}",
@@ -213,3 +214,12 @@ class GamesManager:
         )
         channel = self.client.get_channel(game.channel_id)
         return await channel.send(winner, embed=embed)
+
+    async def winner_callback(self, winner: PlayerModel) -> None:
+        """
+        Callback for when a game ends.
+        Example usage:
+        - You can give the winner a role here.
+        - For connecting to a database on your server/bot, you can refer to examples/own_database.py.
+        """
+        pass

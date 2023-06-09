@@ -207,7 +207,6 @@ async def sponsors(**kwargs) -> Event:
     return event
 
 
-
 # ...
 
 
