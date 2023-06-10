@@ -345,7 +345,7 @@ class HungerGames(commands.Cog):
             )
             embeds.append(recent_winners)
 
-        best_winners = (
+        best_players = (
             await GameModel.filter(
                 Q(guild_id=ctx.guild.id, is_ended=True, winner__gt=1000)
             )
@@ -354,16 +354,16 @@ class HungerGames(commands.Cog):
             .limit(3)
         )
 
-        if len(best_winners) > 0:
-            best_winners = "\n".join(
-                [f"<@{game.winner}> - {game.win_count}" for game in best_winners]
+        if len(best_players) > 0:
+            best_players = "\n".join(
+                [f"<@{game.winner}> - {game.win_count}" for game in best_players]
             )
-            best_winners = discord.Embed(
+            best_players = discord.Embed(
                 title="Best Players",
-                description=best_winners,
+                description=best_players,
                 color=discord.Color.gold(),
             )
-            embeds.append(best_winners)
+            embeds.append(best_players)
 
         await ctx.respond(embeds=embeds, ephemeral=True)
 
