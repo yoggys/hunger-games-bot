@@ -1,4 +1,5 @@
 import asyncio
+from collections import Counter
 
 import discord
 from discord.ext import commands
@@ -327,6 +328,57 @@ class HungerGames(commands.Cog):
         await ctx.respond(
             f"✅ Added **{count-max_id}** bots to **{game}**.", ephemeral=True
         )
+
+    @commands.slash_command(
+        description="Check history of Hunger Games of player or server."
+    )
+    async def hghistory(
+        self,
+        ctx: discord.ApplicationContext,
+        member: discord.Option(
+            discord.Member,
+            "Member to show history of. If blank - server history",
+            required=False,
+        ) = None,
+    ) -> None:
+        if member:
+            games_of_member = await PlayerModel.filter(user_id=member.id)
+
+            if not games_of_member:
+                await ctx.respond(
+                    f"{member.mention} did not participate in any Hunger Games game.",
+                    ephemeral=True,
+                )
+            else:
+                wins = [
+                    player
+                    for player in games_of_member
+                    if (await player.game).winner == member.id
+                ]
+
+                embed = discord.Embed(
+                    title=f"Hunger Games history for {str(member).split('#')[0]}",
+                    description=f"Games participated: ` {len(games_of_member)} `\nGames won: ` {len(wins)} `",
+                )
+                await ctx.respond(embed=embed, ephemeral=True)
+
+        else:
+            games = await GameModel.filter(is_ended=True)
+            winners = Counter([game.winner for game in games]).most_common(3)
+
+            embed = discord.Embed(
+                title="Hunger Games history",
+                description="Helded games: ` {} `\n\nBest players:\n{}".format(
+                    len(games),
+                    "\n".join(
+                        [
+                            f"{'#'*(i+1)} Top {i+1}\n<@{winners[i][0]}> - ` {winners[i][1]} wins `"
+                            for i in range(len(winners))
+                        ]
+                    ),
+                ),
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
 
 
 def setup(client):
