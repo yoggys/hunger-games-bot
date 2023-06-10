@@ -23,7 +23,7 @@ class GamesManager:
     ) -> Union[list[PlayerModel], int]:
         """Returns a list of alive players in the game."""
         model = model if isinstance(model, GameModel) else model.game
-        queryset = PlayerModel.filter(Q(game=model) & Q(is_alive=True))
+        queryset = PlayerModel.filter(Q(game=model, is_alive=True))
         if restart:
             queryset = queryset.filter(~Q(current_day=model.current_day))
         return await queryset.count() if count else await queryset
