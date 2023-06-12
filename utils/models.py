@@ -30,7 +30,7 @@ class GameModel(BaseModel):
     current_day_choices = fields.JSONField(default=[])
     invited_users = fields.JSONField(default=[])
     winner = fields.BigIntField(null=True)
-    
+
     def __str__(self) -> str:
         return f"#{self.id}"
 
@@ -53,4 +53,6 @@ class PlayerModel(BaseModel):
     death_by = fields.CharField(max_length=256, null=True)
 
     def __str__(self) -> str:
-        return f"<@{self.user_id}>"
+        return (
+            f"` Bot #{self.user_id} `" if self.user_id < 1000 else f"<@{self.user_id}>"
+        )

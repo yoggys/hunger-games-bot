@@ -2,31 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils.client import HungerGamesBot
-
-
-class InviteView(discord.ui.View):
-    def __init__(self, client: HungerGamesBot):
-        super().__init__(timeout=0)
-        server_url = "https://discord.gg/yoggies"
-        invite_url = "https://canary.discord.com/api/oauth2/authorize?client_id={}&permissions=8&scope=bot%20applications.commands".format(
-            client.application_id
-        )
-
-        @discord.ui.button(
-            label="Invite HungerGames", style=discord.ButtonStyle.url, url=invite_url
-        )
-        async def invite(
-            self, button: discord.ui.Button, interaction: discord.Interaction
-        ):
-            pass
-
-        @discord.ui.button(
-            label="Support server", style=discord.ButtonStyle.url, url=server_url
-        )
-        async def support(
-            self, button: discord.ui.Button, interaction: discord.Interaction
-        ):
-            pass
+from utils.Views import InviteView
 
 
 class System(commands.Cog):
@@ -39,7 +15,7 @@ class System(commands.Cog):
 
     async def change_presence(self):
         activity = discord.Activity(
-            type=discord.ActivityType.watching,
+            type=discord.ActivityType.streaming,
             name="Begin your adventure!",
         )
         await self.client.change_presence(
