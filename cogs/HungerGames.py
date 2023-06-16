@@ -2,7 +2,7 @@ import asyncio
 
 import discord
 from discord.ext import commands
-from tortoise.queryset import Q
+from tortoise.queryset import Count, Q
 
 from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
@@ -246,9 +246,9 @@ class HungerGames(commands.Cog):
         max_day = max([player.current_day for player in players])
         embeds = [game_embed]
         current_day = None
-        description = ""
 
         for i in range(0, len(players), 10):
+            description = ""
             for player in players[i : i + 10]:
                 player_day = max_day if player.is_alive else player.current_day
                 if player_day != current_day:
@@ -266,6 +266,106 @@ class HungerGames(commands.Cog):
         else:
             pages = Paginator(pages=embeds)
             await pages.respond(ctx.interaction, ephemeral=True)
+
+    @commands.slash_command(description="Check player history of Hunger Games.")
+    async def hgplayer(
+        self,
+        ctx: discord.ApplicationContext,
+        member: discord.Option(
+            discord.Member,
+            "Member to check history.",
+        ) = None,
+        state: discord.Option(
+            str, "State to check history.", choices=["global", "server"]
+        ) = "server",
+    ) -> None:
+        member = member or ctx.author
+
+        if state == "global":
+            server_games = [
+                game.id
+                for game in await GameModel.filter(guild_id=ctx.guild.id).only("id")
+            ]
+            games = await PlayerModel.filter(
+                Q(user_id=member.id, game_id__in=server_games)
+            ).count()
+            won_games = await GameModel.filter(
+                winner=member.id, guild_id=ctx.guild.id
+            ).count()
+        else:
+            games = await PlayerModel.filter(user_id=member.id).count()
+            won_games = await GameModel.filter(winner=member.id).count()
+
+        if games == 0:
+            await ctx.respond(
+                f"{member.mention} did not participate in any Hunger Games.",
+                ephemeral=True,
+            )
+
+        embed = discord.Embed(
+            title=f"Hunger Games player {state} history", color=discord.Color.gold()
+        )
+        embed.add_field(name="Games", value=f"` {games} `")
+        embed.add_field(name="Won", value=f"` {won_games} `")
+
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @commands.slash_command(description="Check server history of Hunger Games.")
+    async def hgserver(
+        self,
+        ctx: discord.ApplicationContext,
+    ) -> None:
+        embeds = []
+        games = await GameModel.filter(guild_id=ctx.guild.id).count()
+        games_finished = await GameModel.filter(
+            guild_id=ctx.guild.id, is_ended=True
+        ).count()
+
+        embed = discord.Embed(
+            title="Hunger Games server history", color=discord.Color.gold()
+        )
+        embed.add_field(name="Games", value=f"` {games} `")
+        embed.add_field(name="Finished", value=f"` {games_finished} `")
+        embeds.append(embed)
+
+        recent_winners = (
+            await GameModel.filter(
+                Q(guild_id=ctx.guild.id, is_ended=True, winner__gt=1000)
+            )
+            .order_by("-updated_at")
+            .limit(3)
+            .only("winner")
+        )
+        if len(recent_winners) > 0:
+            recent_winners = "\n".join([f"<@{game.winner}>" for game in recent_winners])
+            recent_winners = discord.Embed(
+                title="Recent Winners",
+                description=recent_winners,
+                color=discord.Color.gold(),
+            )
+            embeds.append(recent_winners)
+
+        best_players = (
+            await GameModel.filter(
+                Q(guild_id=ctx.guild.id, is_ended=True, winner__gt=1000)
+            )
+            .annotate(win_count=Count("winner"))
+            .order_by("-win_count")
+            .limit(3)
+        )
+
+        if len(best_players) > 0:
+            best_players = "\n".join(
+                [f"<@{game.winner}> - {game.win_count}" for game in best_players]
+            )
+            best_players = discord.Embed(
+                title="Best Players",
+                description=best_players,
+                color=discord.Color.gold(),
+            )
+            embeds.append(best_players)
+
+        await ctx.respond(embeds=embeds, ephemeral=True)
 
     @commands.slash_command(description="Create and start a Hunger Games game.")
     @commands.is_owner()
@@ -312,7 +412,7 @@ class HungerGames(commands.Cog):
 
         count += 1
         if (
-            model := await PlayerModel.filter(Q(game=game) & Q(user_id__lte=1000))
+            model := await PlayerModel.filter(Q(game=game, user_id__lte=1000))
             .order_by("-id")
             .first()
         ):
