@@ -207,16 +207,75 @@ async def sponsors(**kwargs) -> Event:
     return event
 
 
+async def fight_player(**kwargs) -> Event:
+    def player_weigth(player: PlayerModel) -> int:
+        positive = 5 * int(player.is_armored) + int(player.is_protected)
+        negative = -6 * int(player.is_injured)
+        return 10 + positive + negative  # 10 is the base weight
+
+    game, player, event = init_utils(**kwargs)
+
+    event._type = EventType.NEGATIVE
+
+    players = await game.players.filter(is_alive=True).exclude(id=player.id)
+    player2 = random.choice(players)
+
+    choice = random.choices(
+        [player, player2], [player_weigth(player), player_weigth(player2)]
+    )[0]
+    winner = player if choice == player else player2
+    loser = player2 if choice == player else player
+
+    if random.random() < 0.2:
+        fight_injured_texts = [
+            "{} engages in a fierce battle with {} but emerges victorious, leaving their opponent injured.",
+            "{} skillfully defeats {} in a grueling fight, inflicting injuries upon them.",
+            "In a brutal clash, {} overpowers {} and inflicts injuries, securing their triumph.",
+        ]
+
+        event.text = random.choice(fight_injured_texts).format(winner, loser)
+        loser.is_injured = True
+        await loser.save()
+    else:
+        fight_death_texts = [
+            "{} engages in a deadly fight with {} and emerges as the victor, ending their opponent's life.",
+            "In a brutal confrontation, {} manages to overpower {} and delivers a fatal blow.",
+            "A fierce battle unfolds between {} and {}, but ultimately, first one emerges triumphant, leaving their opponent lifeless.",
+        ]
+
+        event.text = random.choice(fight_death_texts).format(winner, loser)
+        loser.death_by = f"fight with {winner}"
+        loser.is_alive = False
+        await loser.save()
+
+    if random.random() < 0.15:
+        winner_injured_texts = [
+            "{} sustains injuries despite their victory in the intense fight.",
+            "Even after winning the fight, {}, unfortunately, ends up injured.",
+        ]
+
+        event.text += f"\n{random.choice(winner_injured_texts).format(winner)}"
+        player.is_injured = True
+
+    if not loser.is_alive:
+        player.kills.append(str(loser))
+
+    await player.save()
+
+    return event
+
+
 # ...
 
 
 # Event list
 event_list: list[Event] = [
-    Event(weight=200, callback=nothing),
-    Event(weight=100, callback=wild_animals),
-    Event(weight=50, callback=poisonous),
-    Event(weight=100, callback=chest),
-    Event(weight=50, callback=sponsors),
+    # Event(weight=200, callback=nothing),
+    # Event(weight=70, callback=wild_animals),
+    # Event(weight=50, callback=poisonous),
+    # Event(weight=60, callback=chest),
+    # Event(weight=50, callback=sponsors),
+    Event(weight=90, callback=fight_player),
 ]
 events_weights = [event.weight for event in event_list]
 

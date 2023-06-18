@@ -12,12 +12,16 @@ class HungerGamesBot(commands.Bot):
         self.load_extension("cogs.HungerGames")
 
     async def on_connect(self):
+        await self.init_db()
+
+        if self.sync:
+            await self.sync_commands()
+
+    async def init_db(self):
         await Tortoise.init(
             db_url="sqlite://main.db", modules={"models": ["utils.models"]}
         )
         await Tortoise.generate_schemas()
-        if self.sync:
-            await self.sync_commands()
 
     async def on_ready(self):
         print("Running as {} (ID: {})".format(self.user, self.user.id))

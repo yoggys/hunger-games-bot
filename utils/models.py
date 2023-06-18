@@ -49,7 +49,10 @@ class PlayerModel(BaseModel):
     is_armored = fields.BooleanField(default=False)
 
     current_day = fields.IntField(default=0)  # only for bot reloads
+
     allies = fields.ManyToManyField("models.PlayerModel", related_name="allied_with")
+    kills = fields.JSONField(default=[])
+
     death_by = fields.CharField(max_length=256, null=True)
 
     def __str__(self) -> str:

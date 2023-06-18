@@ -10,6 +10,8 @@ Python 3.10
 
 ```bash
 pip3 install -r requirements.txt
+aerich init -t utils.settings.TORTOISE_ORM
+aerich init-db
 ```
 
 ## Enviroment variables
@@ -36,4 +38,11 @@ python3 -m black .
 
 ```bash
 python3 -m pytest ./tests.py
+```
+
+### How to update db with lastest changes
+
+```bash
+aerich migrate --name <name>
+aerich upgrade
 ```

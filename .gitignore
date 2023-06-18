@@ -156,3 +156,4 @@ cython_debug/
 template.py
 *.db*
 .vscode
+/migrations
