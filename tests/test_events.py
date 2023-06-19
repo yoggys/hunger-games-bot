@@ -44,8 +44,8 @@ async def test_events():
         game = await GameModel.create(guild_id=0, channel_id=0, owner_id=0)
         for index in range(0, 10):
             await PlayerModel.create(game=game, user_id=index)
-        players = await PlayerModel.filter(game=game)    
-        
+        players = await PlayerModel.filter(game=game)
+
         await game.fetch_related("players")
         assert len(game.players) == len(players) and list(game.players) == players
 
