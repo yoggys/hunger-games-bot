@@ -1,4 +1,4 @@
-py-cord==2.4.1
+py-cord==2.5.0
 tortoise-orm==0.20.0
 python-dotenv==1.0.1
 black==24.2.0
