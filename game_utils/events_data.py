@@ -111,6 +111,7 @@ async def chest(**kwargs) -> Event:
         ]
 
         event._type = EventType.POSITIVE
+
         if player.is_injured:
             player.is_injured = False
             event.text = good_loot_texts[0].format(player)
@@ -134,16 +135,125 @@ async def chest(**kwargs) -> Event:
             "A treacherous chest caught {} off guard, triggering an explosive trap.",
             "The excitement of finding a chest quickly turned into danger for {} as it detonated.",
         ]
-
         event._type = EventType.NEGATIVE
+
         event.text = random.choice(bad_loot_texts).format(player)
+
         if player.is_armored:
             event._type = EventType.PASSIVE
             event.text += f"\nFortunately, the armor saved {player}'s life."
+
             player.is_armored = False
         else:
             player.death_by = "explosion"
             player.is_alive = False
+
+    await player.save()
+
+    return event
+
+
+async def sponsors(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    event._type = EventType.POSITIVE
+
+    if player.is_injured:
+        sponsors_heal_descriptions = [
+            "{} receives a sponsor package containing medicine that miraculously heals their injuries.",
+            "In a stroke of luck, sponsors send {} a healing potion, mending their wounds.",
+            "{} is blessed by sponsors with medicine that quickly mends their injuries.",
+        ]
+
+        player.is_injured = False
+
+        event.text = random.choice(sponsors_heal_descriptions).format(player)
+
+    else:
+        if not player.is_armored:
+            sponsors_armor_descriptions = [
+                "Thanks to the generosity of sponsors, a set of armor materializes before {}, offering formidable protection against enemy attacks.",
+                "In recognition of {}, sponsors send a special suit of armor, enhancing their chances of survival.",
+                "{} is granted a gift from sponsors: a sturdy shield that provides unparalleled defense in the arena.",
+            ]
+            event.text = random.choice(sponsors_armor_descriptions).format(player)
+
+            player.is_armored = True
+        elif not player.is_protected:
+            sponsors_meds_descriptions = [
+                "Sponsors send {} a first aid kit, equipping them with life-saving supplies in dangerous situations.",
+                "The district sends {} a set of potent pills, ensuring they have the means to overcome adversity.",
+                "{} receives a medical package from sponsors, containing essential supplies for survival in the harsh arena.",
+            ]
+            event.text = random.choice(sponsors_meds_descriptions).format(player)
+
+            player.is_protected = True
+        else:
+            sponsors_passive_descriptions = [
+                "A generous sponsor delivers a package of nourishing food to {}, preventing hunger from becoming a threat.",
+                "Accompanying the sponsor package, {} receives a detailed map that enhances their navigation skills in the treacherous arena.",
+                "Sponsors provide {} with essential supplies, including clean water and additional resources for an extended stay in the arena.",
+            ]
+            event._type = EventType.PASSIVE
+            event.text = random.choice(sponsors_passive_descriptions).format(player)
+
+    await player.save()
+
+    return event
+
+
+async def fight_player(**kwargs) -> Event:
+    def player_weigth(player: PlayerModel) -> int:
+        positive = 5 * int(player.is_armored) + int(player.is_protected)
+        negative = -6 * int(player.is_injured)
+        return 10 + positive + negative  # 10 is the base weight
+
+    game, player, event = init_utils(**kwargs)
+
+    event._type = EventType.NEGATIVE
+
+    players = await game.players.filter(is_alive=True).exclude(id=player.id)
+    player2 = random.choice(players)
+
+    choice = random.choices(
+        [player, player2], [player_weigth(player), player_weigth(player2)]
+    )[0]
+    winner = player if choice == player else player2
+    loser = player2 if choice == player else player
+
+    if random.random() < 0.2:
+        fight_injured_texts = [
+            "{} engages in a fierce battle with {} but emerges victorious, leaving their opponent injured.",
+            "{} skillfully defeats {} in a grueling fight, inflicting injuries upon them.",
+            "In a brutal clash, {} overpowers {} and inflicts injuries, securing their triumph.",
+        ]
+
+        event.text = random.choice(fight_injured_texts).format(winner, loser)
+        loser.is_injured = True
+        await loser.save()
+    else:
+        fight_death_texts = [
+            "{} engages in a deadly fight with {} and emerges as the victor, ending their opponent's life.",
+            "In a brutal confrontation, {} manages to overpower {} and delivers a fatal blow.",
+            "A fierce battle unfolds between {} and {}, but ultimately, first one emerges triumphant, leaving their opponent lifeless.",
+        ]
+
+        event.text = random.choice(fight_death_texts).format(winner, loser)
+        loser.death_by = f"fight with {winner}"
+        loser.is_alive = False
+        await loser.save()
+
+    if random.random() < 0.15:
+        winner_injured_texts = [
+            "{} sustains injuries despite their victory in the intense fight.",
+            "Even after winning the fight, {}, unfortunately, ends up injured.",
+        ]
+
+        event.text += f"\n{random.choice(winner_injured_texts).format(winner)}"
+        player.is_injured = True
+
+    if not loser.is_alive:
+        player.kills.append(str(loser))
 
     await player.save()
 
@@ -155,10 +265,12 @@ async def chest(**kwargs) -> Event:
 
 # Event list
 event_list: list[Event] = [
-    Event(weight=2, callback=nothing),
-    Event(weight=1, callback=wild_animals),
-    Event(weight=1, callback=poisonous),
-    Event(weight=1, callback=chest),
+    Event(weight=200, callback=nothing),
+    Event(weight=70, callback=wild_animals),
+    Event(weight=50, callback=poisonous),
+    Event(weight=60, callback=chest),
+    Event(weight=50, callback=sponsors),
+    Event(weight=90, callback=fight_player),
 ]
 events_weights = [event.weight for event in event_list]
 

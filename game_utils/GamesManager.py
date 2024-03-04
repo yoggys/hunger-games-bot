@@ -72,9 +72,15 @@ class GamesManager:
     async def send_start_info(self, game: GameModel) -> None:
         channel = self.client.get_channel(game.channel_id)
 
+        players = [str(player) for player in game.players if player.user_id > 1000]
+        description = "\n".join(players)
+
+        bot_count = len(game.players) - len(players)
+        if bot_count != 0:
+            description += f"\n\n> **There are {bot_count} bot(s) in the game.**"
+
         embed = discord.Embed(
-            title=f"The {game} Hunger Games has started!",
-            description="\n".join([str(player) for player in game.players]),
+            title=f"The {game} Hunger Games has started!", description=description
         )
         await channel.send(embed=embed)
 
@@ -199,6 +205,7 @@ class GamesManager:
         game.winner = winner.user_id
 
         await game.save()
+        await self.winner_callback(winner=winner)
 
         embed = discord.Embed(
             title=f"Hunger Games {game}",
@@ -207,3 +214,14 @@ class GamesManager:
         )
         channel = self.client.get_channel(game.channel_id)
         return await channel.send(str(winner), embed=embed)
+
+    async def winner_callback(self, winner: PlayerModel) -> None:
+        """
+        Callback for when a game ends.
+        Example usage:
+        - You can give the winner a role here.
+        - You can access your database here to update the winner's stats.
+        - To receive an event on the server/bot, and then at your preference,
+            for example, use your own database, you can refer to examples/receive_event.py.
+        """
+        pass
