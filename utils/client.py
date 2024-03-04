@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from tortoise import Tortoise
 
 
 class HungerGamesBot(commands.Bot):
@@ -12,10 +11,6 @@ class HungerGamesBot(commands.Bot):
         self.load_extension("cogs.HungerGames")
 
     async def on_connect(self):
-        await Tortoise.init(
-            db_url="sqlite://main.db", modules={"models": ["utils.models"]}
-        )
-        await Tortoise.generate_schemas()
         if self.sync:
             await self.sync_commands()
 

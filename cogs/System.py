@@ -23,7 +23,7 @@ class System(commands.Cog):
         )
 
     @commands.slash_command(description="Shows bot invite link.")
-    async def invite(self, ctx: discord.ApplicationContext):
+    async def invite(self, ctx: discord.ApplicationContext) -> None:
         embed = discord.Embed(
             description="To add {} to your server click the invitation below!".format(
                 self.client.user.mention
@@ -33,13 +33,13 @@ class System(commands.Cog):
         await ctx.respond(embed=embed, view=InviteView(self.client))
 
     @commands.slash_command(description="Shows bot latency.")
-    async def ping(self, ctx: discord.ApplicationContext):
+    async def ping(self, ctx: discord.ApplicationContext) -> None:
         await ctx.respond(
             f"Pong! {round(self.client.latency * 1000)}ms", ephemeral=True
         )
 
     @commands.slash_command(description="Shows bot help.")
-    async def help(self, ctx: discord.ApplicationContext):
+    async def help(self, ctx: discord.ApplicationContext) -> None:
         desc = "> Check more commands by typing `/hg` in chat!\n\n"
         desc += "`/invite` - displays invite link\n"
         desc += "`/ping` - displays bot latency\n"

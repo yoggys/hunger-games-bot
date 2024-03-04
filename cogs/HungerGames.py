@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 import discord
 from discord.ext import commands
@@ -30,7 +31,7 @@ class HungerGames(commands.Cog):
         channel: discord.Option(
             discord.TextChannel, "Channel to create the game in."
         ) = None,
-    ) -> None:
+    ) -> Any:
         if max_players < 2 or max_players > 24:
             return await ctx.respond(
                 "❌ Maximum players must be between 2 and 24.", ephemeral=True
@@ -70,7 +71,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to invite to."),
         member: discord.Option(discord.Member, "Member to invite."),
-    ) -> None:
+    ) -> Any:
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
@@ -84,7 +85,9 @@ class HungerGames(commands.Cog):
             )
 
         if game.is_started:
-            return await ctx.respond("❌ This game has already started.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This game has already started.", ephemeral=True
+            )
 
         if member.bot:
             return await ctx.respond(
@@ -117,13 +120,15 @@ class HungerGames(commands.Cog):
         self,
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to join."),
-    ) -> None:
+    ) -> Any:
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
         if game.is_started:
-            return await ctx.respond("❌ This game has already started.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This game has already started.", ephemeral=True
+            )
 
         if (
             game.is_invite_only
@@ -153,7 +158,7 @@ class HungerGames(commands.Cog):
         self,
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to invite to."),
-    ) -> None:
+    ) -> Any:
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
@@ -164,7 +169,9 @@ class HungerGames(commands.Cog):
             )
 
         if game.is_started:
-            return await ctx.respond("❌ This game has already started.", ephemeral=True)
+            return await ctx.respond(
+                "❌ This game has already started.", ephemeral=True
+            )
 
         await game.fetch_related("players")
         if len(game.players) < 2:
@@ -204,7 +211,7 @@ class HungerGames(commands.Cog):
         self,
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to get more info."),
-    ) -> None:
+    ) -> Any:
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
@@ -238,9 +245,9 @@ class HungerGames(commands.Cog):
         if game.winner:
             game_embed.add_field(
                 name="Winner",
-                value=f"<@{game.winner}>"
-                if game.winner > 0
-                else f"` Bot #{game.winner}`",
+                value=(
+                    f"<@{game.winner}>" if game.winner > 0 else f"` Bot #{game.winner}`"
+                ),
             )
 
         max_day = max([player.current_day for player in players])
@@ -278,7 +285,7 @@ class HungerGames(commands.Cog):
         state: discord.Option(
             str, "State to check history.", choices=["global", "server"]
         ) = "server",
-    ) -> None:
+    ) -> Any:
         member = member or ctx.author
 
         if state == "global":
@@ -314,7 +321,7 @@ class HungerGames(commands.Cog):
     async def hgserver(
         self,
         ctx: discord.ApplicationContext,
-    ) -> None:
+    ) -> Any:
         embeds = []
         games = await GameModel.filter(guild_id=ctx.guild.id).count()
         games_finished = await GameModel.filter(
@@ -329,9 +336,7 @@ class HungerGames(commands.Cog):
         embeds.append(embed)
 
         recent_winners = (
-            await GameModel.filter(
-                Q(guild_id=ctx.guild.id, is_ended=True, winner__gt=1000)
-            )
+            await GameModel.filter(guild_id=ctx.guild.id, is_ended=True, is_bot=False)
             .order_by("-updated_at")
             .limit(3)
             .only("winner")
@@ -346,9 +351,7 @@ class HungerGames(commands.Cog):
             embeds.append(recent_winners)
 
         best_players = (
-            await GameModel.filter(
-                Q(guild_id=ctx.guild.id, is_ended=True, winner__gt=1000)
-            )
+            await GameModel.filter(guild_id=ctx.guild.id, is_ended=True, is_bot=False)
             .annotate(win_count=Count("winner"))
             .order_by("-win_count")
             .limit(3)
@@ -374,7 +377,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         players: discord.Option(int, "Number of players to create.") = 2,
         instant: discord.Option(bool, "Instantly end days of the game.") = False,
-    ) -> None:
+    ) -> Any:
         game = await GameModel.create(
             guild_id=ctx.guild.id,
             channel_id=ctx.channel.id,
@@ -400,7 +403,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID."),
         count: discord.Option(int, "Number of bots to create.") = 1,
-    ) -> None:
+    ) -> Any:
         game = await GameModel.get_or_none(id=game_id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
@@ -412,7 +415,7 @@ class HungerGames(commands.Cog):
 
         count += 1
         if (
-            model := await PlayerModel.filter(Q(game=game, user_id__lte=1000))
+            model := await PlayerModel.filter(game=game, is_bot=False)
             .order_by("-id")
             .first()
         ):
@@ -422,7 +425,7 @@ class HungerGames(commands.Cog):
             max_id = 1
 
         for index in range(max_id, count):
-            await PlayerModel.create(game=game, user_id=index)
+            await PlayerModel.create(game=game, user_id=index, is_bot=True)
 
         await ctx.respond(
             f"✅ Added **{count-max_id}** bots to **{game}**.", ephemeral=True

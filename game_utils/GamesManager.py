@@ -206,4 +206,4 @@ class GamesManager:
             color=discord.Color.gold(),
         )
         channel = self.client.get_channel(game.channel_id)
-        return await channel.send(winner, embed=embed)
+        return await channel.send(str(winner), embed=embed)

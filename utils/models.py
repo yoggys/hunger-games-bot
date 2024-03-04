@@ -1,3 +1,5 @@
+from typing import Self
+
 from tortoise import fields
 from tortoise.models import Model
 
@@ -31,6 +33,8 @@ class GameModel(BaseModel):
     invited_users = fields.JSONField(default=[])
     winner = fields.BigIntField(null=True)
 
+    players: fields.ReverseRelation["PlayerModel"]
+
     def __str__(self) -> str:
         return f"#{self.id}"
 
@@ -43,16 +47,23 @@ class PlayerModel(BaseModel):
     )
     user_id = fields.BigIntField()
 
+    is_bot = fields.BooleanField(default=False)
     is_alive = fields.BooleanField(default=True)
     is_injured = fields.BooleanField(default=False)
     is_protected = fields.BooleanField(default=False)
     is_armored = fields.BooleanField(default=False)
 
     current_day = fields.IntField(default=0)  # only for bot reloads
-    allies = fields.ManyToManyField("models.PlayerModel", related_name="allied_with")
+    allies = fields.ManyToManyField(
+        "models.PlayerModel", related_name="allied_with", null=True
+    )
+    killed_by = fields.ForeignKeyField(
+        "models.PlayerModel", related_name="killed_by", null=True
+    )
     death_by = fields.CharField(max_length=256, null=True)
 
+    allied_with: fields.ReverseRelation[Self]
+    killed_by: fields.ReverseRelation[Self]
+
     def __str__(self) -> str:
-        return (
-            f"` Bot #{self.user_id} `" if self.user_id < 1000 else f"<@{self.user_id}>"
-        )
+        return f"` Bot #{self.user_id} `" if self.is_bot else f"<@{self.user_id}>"

@@ -54,14 +54,12 @@ async def wild_animals(**kwargs) -> Event:
     if player.is_armored:
         event._type = EventType.POSITIVE
         event.text += f"\nLuckily, {player} survived the fight due to their armor."
-
         player.is_armored = False
     else:
         event._type = EventType.NEGATIVE
         event.text += (
             f"\nSadly, {player} couldn't overcome the ferocity of the wild animal."
         )
-
         player.death_by = "wild animals"
         player.is_alive = False
 
@@ -85,12 +83,9 @@ async def poisonous(**kwargs) -> Event:
     if player.is_protected:
         event._type = EventType.POSITIVE
         event.text += f"\nLuckily, {player} survived due to their medicines."
-
         player.is_protected = False
-
     else:
         event._type = EventType.NEGATIVE
-
         if not player.is_injured and random.randint(0, 1):
             event.text += f"\n{player} starts feeling unwell, experiencing the effects of the poison."
             player.is_injured = True
@@ -116,7 +111,6 @@ async def chest(**kwargs) -> Event:
         ]
 
         event._type = EventType.POSITIVE
-
         if player.is_injured:
             player.is_injured = False
             event.text = good_loot_texts[0].format(player)
@@ -140,14 +134,12 @@ async def chest(**kwargs) -> Event:
             "A treacherous chest caught {} off guard, triggering an explosive trap.",
             "The excitement of finding a chest quickly turned into danger for {} as it detonated.",
         ]
+
         event._type = EventType.NEGATIVE
-
         event.text = random.choice(bad_loot_texts).format(player)
-
         if player.is_armored:
             event._type = EventType.PASSIVE
             event.text += f"\nFortunately, the armor saved {player}'s life."
-
             player.is_armored = False
         else:
             player.death_by = "explosion"
