@@ -203,9 +203,9 @@ async def sponsors(**kwargs) -> Event:
 
 
 async def fight_player(**kwargs) -> Event:
-    def player_weigth(player: PlayerModel) -> int:
-        positive = 5 * int(player.is_armored) + int(player.is_protected)
-        negative = -6 * int(player.is_injured)
+    def player_weight(p: PlayerModel) -> int:
+        positive = 5 * int(p.is_armored) + int(p.is_protected)
+        negative = -6 * int(p.is_injured)
         return 10 + positive + negative  # 10 is the base weight
 
     game, player, event = init_utils(**kwargs)
@@ -216,7 +216,7 @@ async def fight_player(**kwargs) -> Event:
     player2 = random.choice(players)
 
     choice = random.choices(
-        [player, player2], [player_weigth(player), player_weigth(player2)]
+        [player, player2], [player_weight(player), player_weight(player2)]
     )[0]
     winner = player if choice == player else player2
     loser = player2 if choice == player else player
@@ -239,7 +239,9 @@ async def fight_player(**kwargs) -> Event:
         ]
 
         event.text = random.choice(fight_death_texts).format(winner, loser)
-        loser.death_by = f"fight with {winner}"
+        loser.death_by = "fight with {}".format(
+            str(winner).replace("`", "") if winner.is_bot else winner
+        )
         loser.is_alive = False
         await loser.save()
 
@@ -250,10 +252,11 @@ async def fight_player(**kwargs) -> Event:
         ]
 
         event.text += f"\n{random.choice(winner_injured_texts).format(winner)}"
-        player.is_injured = True
+        winner.is_injured = True
 
     if not loser.is_alive:
-        player.kills.append(str(loser))
+        await winner.killed_players.add(player)
+        await loser.save()
 
     await player.save()
 

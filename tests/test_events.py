@@ -2,7 +2,7 @@ import asyncio
 import random
 
 import pytest
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 
 from game_utils.Events import Event
 from game_utils.events_data import event_list
@@ -20,6 +20,7 @@ async def initialize():
 
 def cleanup():
     loop.run_until_complete(Tortoise._drop_databases())
+    loop.run_until_complete(connections.close_all())
 
 
 @pytest.fixture(scope="session", autouse=True)

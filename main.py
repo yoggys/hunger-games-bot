@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import traceback
 from os import getenv
 from typing import Optional
 
@@ -10,7 +11,7 @@ from utils.client import HungerGamesBot
 
 load_dotenv(override=True)
 
-parser = argparse.ArgumentParser(description="YogBot main file.")
+parser = argparse.ArgumentParser(description="Hunger Games Bot main file.")
 parser.add_argument("-s", "--sync", action="store_true", help="Sync commands.")
 args = parser.parse_args()
 
@@ -23,7 +24,7 @@ async def init():
 
     global client
     client = HungerGamesBot(args.sync)
-    client.run(getenv("TOKEN"))
+    await client.start(getenv("TOKEN"))
 
 
 if __name__ == "__main__":
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         loop.run_until_complete(init())
     except (KeyboardInterrupt, Exception) as e:
         if not isinstance(e, KeyboardInterrupt):
-            print(e)
+            traceback.print_exc()
         loop.run_until_complete(connections.close_all())
         if client and not client.is_closed():
             loop.run_until_complete(client.close())

@@ -23,8 +23,8 @@ class Event(object):
         """Initializes the Event object.
 
         Args:
-            text (str): Event text.
             weight (int): Event weight (to calculate the chance of the event happening).
+            callback (Callable[..., Coroutine[Any, Any, Self]]): Callback of the Event.
         """
 
         self.weight = weight
@@ -40,3 +40,8 @@ class Event(object):
                 "Event callback does not set required parameters of Event class."
             )
         return event
+
+    @property
+    def type(self) -> EventType:
+        """Event type"""
+        return self._type

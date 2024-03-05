@@ -1,5 +1,3 @@
-from typing import Any, Coroutine
-
 from discord.errors import NotFound
 from discord.ext import pages
 from discord.interactions import Interaction
@@ -12,7 +10,7 @@ class Paginator(pages.Paginator):
 
     async def on_error(
         self, error: Exception, item: Item, interaction: Interaction
-    ) -> Coroutine[Any, Any, None]:
+    ) -> None:
         """This method is called when an error is raised within the paginator."""
 
         if isinstance(error, NotFound):

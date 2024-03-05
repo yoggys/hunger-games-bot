@@ -177,14 +177,14 @@ class GamesManager:
         embed = discord.Embed(
             title=f"Hunger Games {game}",
             description=event.text,
-            color=event._type.value,
+            color=event.type.value,
         )
 
         if user := self.client.get_user(player.user_id):
             embed.set_thumbnail(url=user.display_avatar)
 
         channel = self.client.get_channel(game.channel_id)
-        await channel.send(player, embed=embed)
+        await channel.send(str(player), embed=embed)
 
     async def check_game_end(
         self, game: GameModel, skip_check=False
@@ -199,12 +199,14 @@ class GamesManager:
 
         if winner.current_day != game.current_day:
             winner.current_day = game.current_day
-            await winner.save()
+
+        winner.is_winner = True
+        winner.winner_of = game
+        await winner.save()
 
         game.is_ended = True
-        game.winner = winner.user_id
-
         await game.save()
+
         await self.winner_callback(winner=winner)
 
         embed = discord.Embed(

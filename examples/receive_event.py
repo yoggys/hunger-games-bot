@@ -1,10 +1,10 @@
 # This example shows how to use websocket or REST to receive an event about a user's win.
 # In game_utils\GamesManager.py go to the "winner_callback" method and add the following code:
 
-from utils.models import PlayerModel  # ignore
-
 ## For REST:
 import aiohttp
+
+from utils.models import PlayerModel  # ignore
 
 
 async def winner_callback(self, winner: PlayerModel) -> str:
@@ -15,9 +15,10 @@ async def winner_callback(self, winner: PlayerModel) -> str:
             return await res.text()
 
 
+import json
+
 ## For websocket:
 import websockets
-import json
 
 
 async def winner_callback(self, winner: PlayerModel) -> str:
