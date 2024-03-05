@@ -1,11 +1,10 @@
 import asyncio
-from typing import Any
+from typing import Any, Optional
 
 import discord
 from discord.ext import commands
-from tortoise.queryset import Count, Q
 from tortoise.functions import Sum
-from typing import Optional
+from tortoise.queryset import Count, Q
 
 from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
@@ -205,7 +204,9 @@ class HungerGames(commands.Cog):
             ("\n> " + " ".join(badges)) if badges else "",
         )
 
-    def format_entry(self, index: int, player: PlayerModel, winner: Optional[PlayerModel]) -> str:
+    def format_entry(
+        self, index: int, player: PlayerModel, winner: Optional[PlayerModel]
+    ) -> str:
         return f"{index + 1}. {self.format_player(player, winner)}"
 
     @commands.slash_command(description="Get more info about Hunger Game game.")
@@ -291,8 +292,12 @@ class HungerGames(commands.Cog):
 
         if state == "global":
             games = await PlayerModel.filter(user_id=member.id).count()
-            won_games = await PlayerModel.filter(Q(user_id=member.id) & ~Q(winner_of=None)).count()
-            player_kills = await PlayerModel.filter(user_id=member.id).annotate(kills=Count("killed_players"))
+            won_games = await PlayerModel.filter(
+                Q(user_id=member.id) & ~Q(winner_of=None)
+            ).count()
+            player_kills = await PlayerModel.filter(user_id=member.id).annotate(
+                kills=Count("killed_players")
+            )
             player_kills = sum([p.kills for p in player_kills if p.kills])
         else:
             games = await PlayerModel.filter(
@@ -301,7 +306,9 @@ class HungerGames(commands.Cog):
             won_games = await PlayerModel.filter(
                 Q(user_id=member.id, game__guild_id=ctx.guild.id) & ~Q(winner_of=None)
             ).count()
-            player_kills = await PlayerModel.filter(Q(user_id=member.id, game__guild_id=ctx.guild.id)).annotate(kills=Count("killed_players"))
+            player_kills = await PlayerModel.filter(
+                Q(user_id=member.id, game__guild_id=ctx.guild.id)
+            ).annotate(kills=Count("killed_players"))
         player_kills = sum([p.kills for p in player_kills if p.kills])
         if games == 0:
             return await ctx.respond(
@@ -328,7 +335,9 @@ class HungerGames(commands.Cog):
         games_finished = await GameModel.filter(
             guild_id=ctx.guild.id, is_ended=True
         ).count()
-        games_kills = await GameModel.filter(guild_id=ctx.guild.id).annotate(killed_players=Count('players__killed_by'))
+        games_kills = await GameModel.filter(guild_id=ctx.guild.id).annotate(
+            killed_players=Count("players__killed_by")
+        )
         games_kills = sum([g.killed_players for g in games_kills if g.killed_players])
 
         embed = discord.Embed(
@@ -339,14 +348,21 @@ class HungerGames(commands.Cog):
         embed.add_field(name="Total kills", value=f"` {games_kills} `")
         embeds.append(embed)
 
-        recent_winners = await PlayerModel.filter(Q(
-            game__guild_id=ctx.guild.id, is_bot=False
-        ) & ~Q(winner_of=None)).order_by("-updated_at").limit(3)
+        recent_winners = (
+            await PlayerModel.filter(
+                Q(game__guild_id=ctx.guild.id, is_bot=False) & ~Q(winner_of=None)
+            )
+            .order_by("-updated_at")
+            .limit(3)
+        )
 
         if len(recent_winners) > 0:
-            recent_winners = "\n".join(["{} - ` Hunger Games {} `".format(
-                winner, await winner.game.get()
-            ) for winner in recent_winners])
+            recent_winners = "\n".join(
+                [
+                    "{} - ` Hunger Games {} `".format(winner, await winner.game.get())
+                    for winner in recent_winners
+                ]
+            )
             recent_winners = discord.Embed(
                 title="Recent Winners",
                 description=recent_winners,
@@ -408,8 +424,8 @@ class HungerGames(commands.Cog):
         else:
             max_id = 0
 
-        for index in range(1, count+1):
-            await PlayerModel.create(game=game, user_id=max_id+index, is_bot=True)
+        for index in range(1, count + 1):
+            await PlayerModel.create(game=game, user_id=max_id + index, is_bot=True)
 
         await ctx.respond(
             f"✅ Added **{count-max_id}** bots to **{game}**.", ephemeral=True

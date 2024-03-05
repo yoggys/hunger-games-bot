@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import Any, Callable, Coroutine, Optional, Self
+from typing import Any, Callable, Coroutine, Optional
 
 from discord import Color
 
@@ -18,7 +20,7 @@ class Event(object):
     def __init__(
         self,
         weight: int,
-        callback: Callable[..., Coroutine[Any, Any, Self]],
+        callback: Callable[..., Coroutine[Any, Any, Event]],
     ):
         """Initializes the Event object.
 
@@ -32,7 +34,7 @@ class Event(object):
         self._type: Optional[EventType] = None
         self.text: Optional[str] = None
 
-    async def execute(self, *args, **kwargs) -> Self:
+    async def execute(self, *args, **kwargs) -> Event:
         """Executes the event callback function"""
         event = await self.callback(*args, **kwargs)
         if not event._type or not event.text:

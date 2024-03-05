@@ -1,4 +1,4 @@
-from typing import Self
+from __future__ import annotations
 
 from tortoise import fields
 from tortoise.models import Model
@@ -32,8 +32,8 @@ class GameModel(BaseModel):
     current_day_choices = fields.JSONField(default=[])
     invited_users = fields.JSONField(default=[])
 
-    players: fields.ReverseRelation["PlayerModel"]
-    winner: fields.BackwardOneToOneRelation["PlayerModel"]
+    players: fields.ReverseRelation[PlayerModel]
+    winner: fields.BackwardOneToOneRelation[PlayerModel]
 
     def __str__(self) -> str:
         return f"#{self.id}"
@@ -58,8 +58,8 @@ class PlayerModel(BaseModel):
     is_protected = fields.BooleanField(default=False)
     is_armored = fields.BooleanField(default=False)
 
-    allied_with: fields.ReverseRelation[Self]
-    killed_by: fields.ReverseRelation[Self]
+    allied_with: fields.ReverseRelation[PlayerModel]
+    killed_by: fields.ReverseRelation[PlayerModel]
     death_by = fields.CharField(max_length=256, null=True)
 
     allied_players = fields.ManyToManyField(
@@ -68,9 +68,6 @@ class PlayerModel(BaseModel):
     killed_players = fields.ManyToManyField(
         "models.PlayerModel", related_name="killed_by"
     )
-
-
-
 
     def __str__(self) -> str:
         return f"` Bot #{self.user_id} `" if self.is_bot else f"<@{self.user_id}>"
