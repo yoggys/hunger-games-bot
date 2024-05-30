@@ -1,8 +1,8 @@
 py-cord==2.5.0
-tortoise-orm==0.20.1
+tortoise-orm==0.21.2
 python-dotenv==1.0.1
 black==24.4.2
 pytest==8.2.1
-pytest-asyncio==0.23.6
+pytest-asyncio==0.23.7
 aerich===0.7.2
 websockets==12.0
