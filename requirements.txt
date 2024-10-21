@@ -1,5 +1,5 @@
 py-cord==2.6.0
-tortoise-orm==0.21.6
+tortoise-orm==0.21.7
 python-dotenv==1.0.1
 black==24.8.0
 pytest==8.3.2
