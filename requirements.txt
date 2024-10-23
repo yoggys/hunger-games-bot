@@ -1,7 +1,7 @@
 py-cord==2.6.0
 tortoise-orm==0.21.7
 python-dotenv==1.0.1
-black==24.8.0
+black==24.10.0
 pytest==8.3.2
 pytest-asyncio==0.24.0
 aerich===0.7.2
