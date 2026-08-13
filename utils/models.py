@@ -57,6 +57,7 @@ class PlayerModel(BaseModel):
     is_injured = fields.BooleanField(default=False)
     is_protected = fields.BooleanField(default=False)
     is_armored = fields.BooleanField(default=False)
+    inventory = fields.JSONField(default=[])
 
     allied_with: fields.ReverseRelation[PlayerModel]
     killed_by: fields.ReverseRelation[PlayerModel]
@@ -68,6 +69,50 @@ class PlayerModel(BaseModel):
     killed_players = fields.ManyToManyField(
         "models.PlayerModel", related_name="killed_by"
     )
+
+    def has_item(self, item: str) -> bool:
+        item_name = str(item).strip().lower()
+        raw_items = self.inventory or []
+        return any(str(existing).strip().lower() == item_name for existing in raw_items)
+
+    def add_item(self, item: str) -> bool:
+        item_name = str(item).strip().lower()
+        if not item_name:
+            return False
+
+        inventory = list(self.inventory or [])
+        normalized = [str(existing).strip().lower() for existing in inventory]
+        if item_name in normalized:
+            return False
+
+        inventory.append(item_name)
+        self.inventory = inventory
+        return True
+
+    def remove_item(self, item: str) -> bool:
+        item_name = str(item).strip().lower()
+        if not item_name:
+            return False
+
+        inventory = list(self.inventory or [])
+        remaining = [
+            existing
+            for existing in inventory
+            if str(existing).strip().lower() != item_name
+        ]
+        if len(remaining) == len(inventory):
+            return False
+
+        self.inventory = remaining
+        return True
+
+    def sync_gear_from_inventory(self) -> None:
+        self.is_armored = self.has_item("armor") or self.has_item("shield")
+        self.is_protected = (
+            self.has_item("medkit")
+            or self.has_item("medicine")
+            or self.has_item("potion")
+        )
 
     def __str__(self) -> str:
         return f"` Bot #{self.user_id} `" if self.is_bot else f"<@{self.user_id}>"

@@ -37,7 +37,7 @@ python3 -m black .
 ### Tests
 
 ```bash
-python3 -m pytest ./tests.py
+python3 -m pytest tests
 ```
 
 ### How to update db with lastest changes

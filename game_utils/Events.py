@@ -3,7 +3,24 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Callable, Coroutine, Optional
 
-from discord import Color
+try:
+    from discord import Color
+except (
+    Exception
+):  # pragma: no cover - compatibility for Windows/Python builds without audioop
+
+    class Color:
+        @staticmethod
+        def brand_green() -> int:
+            return 0x43B581
+
+        @staticmethod
+        def brand_red() -> int:
+            return 0xF04747
+
+        @staticmethod
+        def blurple() -> int:
+            return 0x5865F2
 
 
 class EventType(Enum):

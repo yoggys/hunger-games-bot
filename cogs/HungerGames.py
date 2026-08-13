@@ -190,13 +190,54 @@ class HungerGames(commands.Cog):
         if not player.is_alive:
             return f"~~{player}~~ 💀\n>  Died by {player.death_by}. "
 
+        item_labels = {
+            "armor": "🛡️ Armor",
+            "shield": "🛡️ Shield",
+            "medkit": "💉 Medkit",
+            "medicine": "💊 Medicine",
+            "potion": "🧪 Potion",
+            "food": "🍖 Food",
+            "charm": "✨ Charm",
+            "herbs": "🌿 Herbs",
+            "knife": "🗡️ Knife",
+            "map": "🗺️ Map",
+            "legendary_sword": "⚔️ Legendary Sword",
+            "crown": "👑 Crown",
+            "divine_favor": "☆ Divine Favor",
+            "hope": "💫 Hope",
+            "rope": "🪢 Rope",
+            "stamina": "⚡ Stamina",
+            "ancient_relic": "🏺 Ancient Relic",
+            "rivalry_marker": "⚔️ Rivalry",
+            "warning_gift": "⚠️ Warning",
+            "spirit_gift": "👻 Spirit Gift",
+            "temporal_edge": "⏳ Temporal Edge",
+            "oracle_blessing": "🔮 Oracle Blessing",
+            "knowledge_shard": "📜 Knowledge",
+            "fresh_water": "💧 Fresh Water",
+            "seeds": "🌱 Seeds",
+            "blessing": "✨ Blessing",
+            "volcanic_treasure": "🌋 Molten Treasure",
+        }
+
         badges = []
+        inventory = sorted(
+            {str(item).strip().lower() for item in (player.inventory or [])}
+        )
+
         if player.is_injured:
             badges.append("`[ 🤕 Injured ]`")
-        if player.is_armored:
-            badges.append("`[ 🛡️ Armored ]`")
-        if player.is_protected:
-            badges.append("`[ 💉 Meds ]`")
+
+        item_badges = []
+        for item in inventory:
+            label = item_labels.get(item)
+            if label:
+                item_badges.append(f"`[ {label} ]`")
+
+        if item_badges:
+            badges.extend(item_badges)
+        else:
+            badges.append("`[ ⚔️ Bare ]`")
 
         return "{} {}{}".format(
             player,

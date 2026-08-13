@@ -8,7 +8,7 @@ class InviteView(discord.ui.View):
         invite_url = "https://canary.discord.com/api/oauth2/authorize?client_id={}&permissions=8&scope=bot%20applications.commands".format(
             client.application_id
         )
-        server_url = "https://discord.gg/yoggies"
+        server_url = "https://dc.yoggies.dev/"
 
         invite = discord.ui.Button(
             label="Invite HungerGames", style=discord.ButtonStyle.url, url=invite_url

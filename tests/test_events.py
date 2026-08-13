@@ -30,6 +30,11 @@ def initialize_tests(request: pytest.FixtureRequest):
 
 
 @pytest.mark.asyncio()
+async def test_event_pool_is_expanded():
+    assert len(event_list) >= 12
+
+
+@pytest.mark.asyncio()
 async def test_events():
     for event in event_list:
         # Test events type
