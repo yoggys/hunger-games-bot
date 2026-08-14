@@ -10,6 +10,7 @@ from game_utils.GamesManager import GamesManager
 from utils.client import HungerGamesBot
 from utils.models import GameModel, PlayerModel
 from utils.Paginator import Paginator
+from utils.Views import JoinGameView
 
 
 class HungerGames(commands.Cog):
@@ -33,7 +34,9 @@ class HungerGames(commands.Cog):
             discord.TextChannel, "Channel to create the game in."
         ) = None,
     ) -> Any:
-        if max_players < 2 or max_players > 24:
+        if max_players < 2 or (
+            max_players > 24 and not await ctx.bot.is_owner(ctx.author)
+        ):
             return await ctx.respond(
                 "❌ Maximum players must be between 2 and 24.", ephemeral=True
             )
@@ -64,7 +67,7 @@ class HungerGames(commands.Cog):
         embed.add_field(name="Private", value=f"` {game.is_invite_only} `")
         embed.add_field(name="Channel", value=channel.mention)
 
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=embed, view=JoinGameView(game.id))
 
     @commands.slash_command(description="Invite someone to a Hunger Games game.")
     async def hginvite(
