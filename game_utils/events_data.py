@@ -33,6 +33,18 @@ def remove_item(player: PlayerModel, item_name: str) -> None:
     player.sync_gear_from_inventory()
 
 
+def has_any_item(player: PlayerModel, *items: str) -> bool:
+    return any(has_item(player, item) for item in items)
+
+
+def consume_any_item(player: PlayerModel, *items: str) -> bool:
+    for item in items:
+        if has_item(player, item):
+            remove_item(player, item)
+            return True
+    return False
+
+
 # Utils
 def init_utils(**kwargs) -> tuple[GameModel, PlayerModel, Event]:
     """Initializes utils for the event callback function."""
@@ -1086,7 +1098,7 @@ async def final_horizon(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
     horizon_texts = [
-        "As {} reaches the edge of the arena, they see a way out—a final path to freedom.",
+        "As {} reaches the edge of the arena, they see a way out - a final path to freedom.",
         "{} glimpses the end of the games and feels the weight of hope.",
         "The horizon shifts, and {} realizes they are close to ending this nightmare.",
     ]
@@ -1183,7 +1195,7 @@ async def ice_lake(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
     ice_texts = [
-        "{} encounters a frozen lake that might be the fastest crossing—or a death trap.",
+        "{} encounters a frozen lake that might be the fastest crossing - or a death trap.",
         "A sheet of ice stretches across a chasm, and {} must decide whether to risk it.",
         "The treacherous ice creaks beneath {}'s feet as they attempt a dangerous crossing.",
     ]
@@ -1232,7 +1244,7 @@ async def abandoned_bunker(**kwargs) -> Event:
     event.text += f"\nAmong the dust and rust, {player} finds a valuable {loot}."
 
     if random.random() < 0.2:
-        event.text += f"\nBut the bunker isn't empty—something stirs in the darkness."
+        event.text += f"\nBut the bunker isn't empty - something stirs in the darkness."
         player.is_injured = True
 
     await player.save()
@@ -1334,7 +1346,7 @@ async def treasure_maze(**kwargs) -> Event:
     maze_texts = [
         "{} stumbles into an ancient maze filled with treasures and traps.",
         "A labyrinth of corridors appears, and {} navigates through seeking riches.",
-        "{} enters a twisting maze with the promise of great rewards—and great danger.",
+        "{} enters a twisting maze with the promise of great rewards - and great danger.",
     ]
 
     event.text = random.choice(maze_texts).format(player)
@@ -1381,7 +1393,10 @@ async def hidden_city(**kwargs) -> Event:
     add_item(player, "ancient_relic")
     event.text += f"\n{player} claims an ancient relic that resonates with old power."
 
-    if not player.is_injured and random.random() < 0.3:
+    if has_any_item(player, "map", "knowledge_shard", "oracle_blessing"):
+        add_item(player, "stamina")
+        event.text += f"\nThe map and old wisdom turn the ruin into a survivable advantage for {player}."
+    elif not player.is_injured and random.random() < 0.3:
         add_item(player, "map")
         event.text += f"\nAlongside the relic, a map of the arena itself is discovered."
 
@@ -1556,7 +1571,7 @@ async def rivalry_ignite(**kwargs) -> Event:
 
     rivalry_texts = [
         "{} spots {} across the arena, and old rivalries are reignited.",
-        "The sight of {} stirs something dangerous in {}'s heart—ancient rivalry awakens.",
+        "The sight of {} stirs something dangerous in {}'s heart - ancient rivalry awakens.",
         "{} and {} lock eyes, and the air crackles with tension and old hatred.",
     ]
 
@@ -1565,6 +1580,9 @@ async def rivalry_ignite(**kwargs) -> Event:
 
     add_item(player, "rivalry_marker")
     event.text += f"\n{player} becomes obsessed with confronting {rival}, willing to take any risk."
+    if has_any_item(player, "knife", "legendary_sword", "warning_gift"):
+        event._type = EventType.POSITIVE
+        event.text += f"\nThe rivalry sharpens {player}'s focus, and their gear makes the confrontation more dangerous for {rival}."
 
     await player.save()
     return event
@@ -1630,7 +1648,13 @@ async def ghost_encounter(**kwargs) -> Event:
     event.text = random.choice(ghost_texts).format(player)
     event._type = EventType.PASSIVE
 
-    if random.random() < 0.5:
+    if has_any_item(
+        player, "spirit_gift", "oracle_blessing", "knowledge_shard", "warning_gift"
+    ):
+        event._type = EventType.POSITIVE
+        event.text += f"\nThe ghost recognizes {player}'s arcane resolve and grants them a vision of hidden treasure."
+        add_item(player, "spirit_gift")
+    elif random.random() < 0.5:
         event._type = EventType.POSITIVE
         event.text += f"\nThe ghost grants {player} a vision of hidden treasure."
         add_item(player, "spirit_gift")
@@ -1654,8 +1678,13 @@ async def time_distortion(**kwargs) -> Event:
 
     event.text = random.choice(time_texts).format(player)
     event._type = EventType.PASSIVE
-
-    if random.random() < 0.6:
+    if has_any_item(
+        player, "knowledge_shard", "oracle_blessing", "spirit_gift", "temporal_edge"
+    ):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} channels the strange moment into a tactical advantage and gains a temporal edge."
+        add_item(player, "temporal_edge")
+    elif random.random() < 0.6:
         event._type = EventType.POSITIVE
         event.text += (
             f"\n{player} uses this gift to escape danger and gain valuable time."
@@ -1683,7 +1712,7 @@ async def oracle_riddle(**kwargs) -> Event:
 
     event.text = random.choice(oracle_texts).format(player)
 
-    if has_item(player, "map") or has_item(player, "charm"):
+    if has_any_item(player, "map", "charm", "knowledge_shard", "oracle_blessing"):
         event._type = EventType.POSITIVE
         event.text += f"\n{player} solves the riddle and receives a legendary reward."
         add_item(player, "oracle_blessing")
@@ -1709,7 +1738,7 @@ async def last_water_source(**kwargs) -> Event:
     _, player, event = init_utils(**kwargs)
 
     water_texts = [
-        "{} finds the last known water source in the arena—but it's being guarded.",
+        "{} finds the last known water source in the arena - but it's being guarded.",
         "A precious spring reveals itself to {}, but others are converging on the same location.",
         "{} discovers fresh water, but the sound of footsteps suggests they're not alone.",
     ]
@@ -1719,7 +1748,11 @@ async def last_water_source(**kwargs) -> Event:
     game, player, event = init_utils(**kwargs)
     players = await game.players.filter(is_alive=True).exclude(id=player.id)
 
-    if not players or random.random() < 0.4:
+    if has_any_item(player, "fresh_water", "seeds", "food"):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} uses their saved supplies to secure the spring and hold the advantage."
+        add_item(player, "fresh_water")
+    elif not players or random.random() < 0.4:
         event._type = EventType.POSITIVE
         event.text += f"\n{player} claims the water and gains a crucial advantage."
         add_item(player, "fresh_water")
@@ -1748,7 +1781,11 @@ async def seed_cache(**kwargs) -> Event:
 
     add_item(player, "seeds")
     add_item(player, "food")
-    event.text += f"\n{player} gains both immediate sustenance and long-term hope."
+    if has_any_item(player, "fresh_water", "blessing", "herbs"):
+        add_item(player, "stamina")
+        event.text += f"\nThe cache thrives with their existing supplies, and {player} gains a reserve of stamina."
+    else:
+        event.text += f"\n{player} gains both immediate sustenance and long-term hope."
 
     await player.save()
     return event
@@ -1766,13 +1803,11 @@ async def medicine_shortage(**kwargs) -> Event:
     event.text = random.choice(shortage_texts).format(player)
     event._type = EventType.NEGATIVE
 
-    if (
-        has_item(player, "medkit")
-        or has_item(player, "medicine")
-        or has_item(player, "potion")
-    ):
+    if has_any_item(player, "medkit", "medicine", "potion", "herbs", "fresh_water"):
         event._type = EventType.POSITIVE
         event.text += f"\nLuckily, {player} has supplies before the shortage hits hard."
+        if player.is_injured:
+            player.is_injured = False
     else:
         if player.is_injured:
             event.text += (
@@ -1799,7 +1834,7 @@ async def armor_arms_race(**kwargs) -> Event:
     event.text = random.choice(race_texts).format(player)
     event._type = EventType.PASSIVE
 
-    if has_item(player, "armor") or has_item(player, "shield"):
+    if has_any_item(player, "armor", "shield", "oracle_blessing", "legendary_sword"):
         event._type = EventType.POSITIVE
         event.text += f"\n{player} already has superior gear and feels confident."
     else:
@@ -2086,10 +2121,15 @@ async def void_crossing(**kwargs) -> Event:
     game, player, event = init_utils(**kwargs)
 
     event.text = f"{player} attempted to cross the void between dimensions."
-    if has_item(player, "temporal_edge") or random.random() < 0.35:
+    if (
+        has_any_item(player, "temporal_edge", "knowledge_shard", "oracle_blessing")
+        or random.random() < 0.35
+    ):
         event._type = EventType.POSITIVE
         event.text += f"\n{player} successfully crossed into a new realm of power."
         add_item(player, "knowledge_shard")
+        if has_item(player, "temporal_edge"):
+            add_item(player, "oracle_blessing")
     else:
         event._type = EventType.NEGATIVE
         event.text += f"\n{player} was lost between dimensions."
@@ -2168,96 +2208,293 @@ async def entity_whispers(**kwargs) -> Event:
     return event
 
 
+# === ADDITIONAL PASSIVE EVENTS (Variations) ===
+async def peaceful_day(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    peaceful_descriptions = [
+        "{} found a serene spot and spent a peaceful day in solitude.",
+        "The arena showed mercy as {} enjoyed a calm and uneventful day.",
+        "Tranquility embraced {} as they navigated the day without conflict.",
+        "{} used the peaceful day to rest and regain their strength.",
+        "A brief moment of serenity allowed {} to catch their breath.",
+        "{} wandered through a peaceful section of the arena, finding solace.",
+    ]
+
+    event._type = EventType.PASSIVE
+    event.text = random.choice(peaceful_descriptions).format(player)
+    if has_any_item(player, "food", "fresh_water", "herbs", "seeds"):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} makes the most of their supplies and recovers a little strength."
+        if player.is_injured:
+            player.is_injured = False
+    return event
+
+
+async def safe_haven(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    safe_descriptions = [
+        "{} discovered a hidden safe haven and spent the day in security.",
+        "The arena provided {} with a temporary sanctuary away from danger.",
+        "{} found shelter in a safe location and spent the day undisturbed.",
+        "Protected by their hiding place, {} enjoyed a day free from threat.",
+        "{} stumbled upon a safe haven and used it wisely to recover.",
+    ]
+
+    event._type = EventType.PASSIVE
+    event.text = random.choice(safe_descriptions).format(player)
+    if has_any_item(player, "warning_gift", "charm", "oracle_blessing"):
+        event._type = EventType.POSITIVE
+        event.text += f"\nThe shelter turns into a brief advantage, and {player} rests with greater confidence."
+        if player.is_injured:
+            player.is_injured = False
+    return event
+
+
+async def quiet_reflection(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    quiet_descriptions = [
+        "{} spent the day in quiet reflection about their survival strategy.",
+        "A moment of stillness allowed {} to contemplate their situation.",
+        "{} used the quiet day to mentally prepare for what lies ahead.",
+        "Surrounded by silence, {} found clarity in their isolation.",
+        "{} reflected on their journey and steeled their resolve.",
+    ]
+
+    event._type = EventType.PASSIVE
+    event.text = random.choice(quiet_descriptions).format(player)
+    return event
+
+
+# === ADDITIONAL COMBAT EVENTS (Variations) ===
+async def wild_beasts(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    beasts_descriptions = [
+        "{} was cornered by a pack of wild beasts in a desperate struggle.",
+        "Multiple dangerous creatures descended upon {}, forcing a harrowing fight.",
+        "{} found themselves surrounded by savage beasts in a life-threatening encounter.",
+        "A horde of wild beasts attacked {}, testing their survival instincts.",
+    ]
+
+    event.text = random.choice(beasts_descriptions).format(player)
+    if has_item(player, "armor") or has_item(player, "shield"):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} repelled the beasts with their protective gear."
+        remove_item(player, "armor")
+        remove_item(player, "shield")
+    else:
+        event._type = EventType.NEGATIVE
+        event.text += f"\n{player} was overwhelmed by the pack of beasts."
+        player.death_by = "wild beasts"
+        player.is_alive = False
+
+    await player.save()
+    return event
+
+
+async def fierce_encounter(**kwargs) -> Event:
+    _, player, event = init_utils(**kwargs)
+
+    fierce_descriptions = [
+        "{} had a tense and fierce encounter with a massive predator.",
+        "A single fearsome creature emerged to challenge {} in combat.",
+        "{} was face-to-face with a terrifying apex predator.",
+        "An intense struggle with a fierce creature tested {}'s will to survive.",
+    ]
+
+    event.text = random.choice(fierce_descriptions).format(player)
+    if has_item(player, "legendary_sword"):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} defeated the creature with their legendary sword."
+    elif has_item(player, "armor") or has_item(player, "shield"):
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} survived with help from their protective gear."
+        remove_item(player, "armor")
+        remove_item(player, "shield")
+    else:
+        event._type = EventType.NEGATIVE
+        event.text += f"\n{player} was mauled by the fierce predator."
+        player.death_by = "fierce creature"
+        player.is_alive = False
+
+    await player.save()
+    return event
+
+
+async def combat_duel(**kwargs) -> Event:
+    game, player, event = init_utils(**kwargs)
+
+    players = [p for p in game.players if p.is_alive and p != player]
+    if not players:
+        event._type = EventType.POSITIVE
+        event.text = f"{player} sought combat but found no worthy opponent."
+        return event
+
+    rival = random.choice(players)
+    duel_descriptions = [
+        "{} and {} clashed in an epic duel for supremacy.",
+        "An intense one-on-one battle erupted between {} and {}.",
+        "{} challenged {} to a direct combat, and they accepted.",
+    ]
+
+    event.text = random.choice(duel_descriptions).format(player, rival)
+
+    player_strength = 0.5
+    if has_item(player, "legendary_sword") or has_item(player, "knife"):
+        player_strength += 0.2
+    if has_item(player, "armor") or has_item(player, "shield"):
+        player_strength += 0.15
+
+    if random.random() < player_strength:
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} emerged victorious!"
+        rival.death_by = f"combat with {player}"
+        rival.is_alive = False
+    else:
+        event._type = EventType.NEGATIVE
+        event.text += f"\n{rival} emerged victorious!"
+        player.death_by = f"combat with {rival}"
+        player.is_alive = False
+
+    await player.save()
+    await rival.save()
+    return event
+
+
+async def deadly_confrontation(**kwargs) -> Event:
+    game, player, event = init_utils(**kwargs)
+
+    players = [p for p in game.players if p.is_alive and p != player]
+    if not players:
+        event._type = EventType.POSITIVE
+        event.text = f"{player} searched for confrontation but found only solitude."
+        return event
+
+    opponent = random.choice(players)
+    event.text = f"{player} was forced into a deadly confrontation with {opponent}!"
+
+    opponent_strength = 0.5
+    player_strength = 0.5
+
+    if has_item(player, "legendary_sword"):
+        player_strength += 0.2
+    if has_item(opponent, "legendary_sword"):
+        opponent_strength += 0.2
+
+    if random.random() < player_strength:
+        event._type = EventType.POSITIVE
+        event.text += f"\n{player} won the confrontation and {opponent} fell."
+        opponent.death_by = f"confrontation with {player}"
+        opponent.is_alive = False
+    else:
+        event._type = EventType.NEGATIVE
+        event.text += f"\n{opponent} won and {player} could not recover."
+        player.death_by = f"confrontation with {opponent}"
+        player.is_alive = False
+
+    await player.save()
+    await opponent.save()
+    return event
+
+
 # Event list
 event_list: list[Event] = [
-    # Standard Events (Common, balanced)
-    Event(weight=200, callback=nothing),
-    Event(weight=70, callback=wild_animals),
+    # === PASSIVE EVENTS (Distributed variations) ===
+    Event(weight=60, callback=nothing),
+    Event(weight=55, callback=peaceful_day),
+    Event(weight=50, callback=safe_haven),
+    Event(weight=48, callback=quiet_reflection),
+    # === COMBAT EVENTS (Distributed variations) ===
+    Event(weight=50, callback=wild_animals),
+    Event(weight=48, callback=wild_beasts),
+    Event(weight=45, callback=fierce_encounter),
+    Event(weight=52, callback=fight_player),
+    Event(weight=45, callback=combat_duel),
+    Event(weight=42, callback=deadly_confrontation),
+    # === RESOURCE/DISCOVERY EVENTS ===
     Event(weight=50, callback=poisonous),
-    Event(weight=60, callback=chest),
-    Event(weight=50, callback=sponsors),
-    Event(weight=90, callback=fight_player),
-    Event(weight=42, callback=storm),
-    Event(weight=55, callback=hidden_cache),
-    Event(weight=45, callback=river_crossing),
-    Event(weight=34, callback=alliance_offer),
-    Event(weight=40, callback=food_cache),
-    Event(weight=38, callback=ritual_site),
-    Event(weight=52, callback=supply_drop),
-    Event(weight=30, callback=bird_omen),
-    Event(weight=28, callback=hunter_lair),
-    Event(weight=36, callback=arena_fire),
-    Event(weight=24, callback=fog_mystery),
-    Event(weight=32, callback=old_map),
-    Event(weight=30, callback=snare_trap),
-    Event(weight=22, callback=stolen_signal),
-    Event(weight=26, callback=ecology_bloom),
-    Event(weight=20, callback=black_market),
-    Event(weight=18, callback=graveyard_search),
-    Event(weight=19, callback=moonlit_ritual),
-    Event(weight=24, callback=scavenger_hunt),
-    Event(weight=21, callback=broken_tower),
-    Event(weight=17, callback=failing_sponsor),
-    # Expanded Standard Events
-    Event(weight=25, callback=underground_cavern),
-    Event(weight=28, callback=crystal_pool),
-    Event(weight=23, callback=merchant_caravan),
-    Event(weight=26, callback=ancient_ruins),
-    Event(weight=29, callback=windstorm),
-    Event(weight=24, callback=blood_moon),
-    Event(weight=20, callback=beast_den),
-    Event(weight=22, callback=forgotten_shrine),
-    Event(weight=19, callback=shadow_hunter),
-    Event(weight=27, callback=oasis),
-    Event(weight=18, callback=eclipse_event),
-    # Legendary Events (Low Weight - Rare, High Impact)
+    Event(weight=55, callback=chest),
+    Event(weight=45, callback=sponsors),
+    Event(weight=50, callback=storm),
+    Event(weight=50, callback=hidden_cache),
+    Event(weight=42, callback=river_crossing),
+    Event(weight=30, callback=alliance_offer),
+    Event(weight=38, callback=food_cache),
+    Event(weight=36, callback=ritual_site),
+    Event(weight=48, callback=supply_drop),
+    Event(weight=28, callback=bird_omen),
+    Event(weight=26, callback=hunter_lair),
+    Event(weight=32, callback=arena_fire),
+    Event(weight=22, callback=fog_mystery),
+    Event(weight=30, callback=old_map),
+    Event(weight=28, callback=snare_trap),
+    Event(weight=20, callback=stolen_signal),
+    Event(weight=24, callback=ecology_bloom),
+    Event(weight=18, callback=black_market),
+    Event(weight=16, callback=graveyard_search),
+    Event(weight=17, callback=moonlit_ritual),
+    Event(weight=22, callback=scavenger_hunt),
+    Event(weight=19, callback=broken_tower),
+    Event(weight=15, callback=failing_sponsor),
+    # === EXPANDED STANDARD EVENTS ===
+    Event(weight=24, callback=underground_cavern),
+    Event(weight=26, callback=crystal_pool),
+    Event(weight=21, callback=merchant_caravan),
+    Event(weight=24, callback=ancient_ruins),
+    Event(weight=27, callback=windstorm),
+    Event(weight=22, callback=blood_moon),
+    Event(weight=18, callback=beast_den),
+    Event(weight=20, callback=forgotten_shrine),
+    Event(weight=17, callback=shadow_hunter),
+    Event(weight=25, callback=oasis),
+    Event(weight=16, callback=eclipse_event),
+    # === LEGENDARY EVENTS (Low Weight - Rare, High Impact) ===
     Event(weight=6, callback=legendary_discovery),
     Event(weight=7, callback=arena_collapse),
     Event(weight=5, callback=forbidden_vault),
     Event(weight=8, callback=celestial_intervention),
     Event(weight=4, callback=betrayal_cascade),
     Event(weight=6, callback=final_horizon),
-    # Expanded Legendary Events
     Event(weight=5, callback=volcano_eruption),
     Event(weight=6, callback=time_rift),
     Event(weight=4, callback=godly_wrath),
-    # Challenge Events (Test skill and loadout)
-    Event(weight=15, callback=cliff_climb),
-    Event(weight=14, callback=poison_swamp),
-    Event(weight=16, callback=ice_lake),
-    Event(weight=18, callback=abandoned_bunker),
-    Event(weight=25, callback=ambush),
-    Event(weight=12, callback=endurance_trial),
-    Event(weight=10, callback=treasure_maze),
-    Event(weight=9, callback=hidden_city),
-    Event(weight=11, callback=avalanche),
-    # Expanded Challenge Events
-    Event(weight=16, callback=dragon_encounter),
-    Event(weight=14, callback=cursed_temple),
-    Event(weight=11, callback=void_crossing),
-    # Disaster Events (Arena-wide catastrophes)
+    # === CHALLENGE EVENTS (Test skill and loadout) ===
+    Event(weight=13, callback=cliff_climb),
+    Event(weight=12, callback=poison_swamp),
+    Event(weight=14, callback=ice_lake),
+    Event(weight=16, callback=abandoned_bunker),
+    Event(weight=22, callback=ambush),
+    Event(weight=11, callback=endurance_trial),
+    Event(weight=9, callback=treasure_maze),
+    Event(weight=8, callback=hidden_city),
+    Event(weight=10, callback=avalanche),
+    Event(weight=14, callback=dragon_encounter),
+    Event(weight=12, callback=cursed_temple),
+    Event(weight=10, callback=void_crossing),
+    # === DISASTER EVENTS (Arena-wide catastrophes) ===
     Event(weight=8, callback=earthquake),
     Event(weight=7, callback=flooding),
     Event(weight=6, callback=meteor_strike),
-    # Social Events (Alliance and player interaction)
-    Event(weight=13, callback=rivalry_ignite),
-    Event(weight=11, callback=healing_circle),
-    Event(weight=10, callback=betrayal_warning),
-    # Expanded Social Events
-    Event(weight=12, callback=alliance_forged),
-    Event(weight=11, callback=betrayal_confirmed),
-    # Mystery Events (Supernatural and unknown)
-    Event(weight=9, callback=ghost_encounter),
-    Event(weight=8, callback=time_distortion),
-    Event(weight=7, callback=oracle_riddle),
-    # Expanded Mystery Events
-    Event(weight=8, callback=forbidden_knowledge),
-    Event(weight=7, callback=entity_whispers),
-    # Scarcity Events (Resource competition)
-    Event(weight=12, callback=last_water_source),
-    Event(weight=10, callback=seed_cache),
-    Event(weight=9, callback=medicine_shortage),
-    Event(weight=8, callback=armor_arms_race),
+    # === SOCIAL EVENTS (Alliance and player interaction) ===
+    Event(weight=12, callback=rivalry_ignite),
+    Event(weight=10, callback=healing_circle),
+    Event(weight=9, callback=betrayal_warning),
+    Event(weight=11, callback=alliance_forged),
+    Event(weight=10, callback=betrayal_confirmed),
+    # === MYSTERY EVENTS (Supernatural and unknown) ===
+    Event(weight=8, callback=ghost_encounter),
+    Event(weight=7, callback=time_distortion),
+    Event(weight=6, callback=oracle_riddle),
+    Event(weight=7, callback=forbidden_knowledge),
+    Event(weight=6, callback=entity_whispers),
+    # === SCARCITY EVENTS (Resource competition) ===
+    Event(weight=11, callback=last_water_source),
+    Event(weight=9, callback=seed_cache),
+    Event(weight=8, callback=medicine_shortage),
+    Event(weight=7, callback=armor_arms_race),
 ]
 
 

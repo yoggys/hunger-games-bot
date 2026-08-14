@@ -72,17 +72,43 @@ class GamesManager:
     async def send_start_info(self, game: GameModel) -> None:
         channel = self.client.get_channel(game.channel_id)
 
-        players = [str(player) for player in game.players if player.user_id > 1000]
-        description = "\n".join(players)
+        view = discord.ui.DesignerView(timeout=0)
+        container = discord.ui.Container(color=discord.Color.gold())
+        view.add_item(container)
+
+        section = discord.ui.Section(
+            accessory=discord.ui.Thumbnail(self.client.user.display_avatar.url),
+        )
+        container.add_item(section)
+
+        section.add_text(f"# The Hunger Games has started!")
+
+        players = [f"- {player}" for player in game.players if player.user_id > 1000]
+        if players:
+            section.add_text("\n".join(players))
 
         bot_count = len(game.players) - len(players)
         if bot_count != 0:
-            description += f"\n\n> **There are {bot_count} bot(s) in the game.**"
+            section.add_text(
+                "> **There {} {} {} in the game.**".format(
+                    "is" if bot_count == 1 else "are",
+                    bot_count,
+                    "bot" if bot_count == 1 else "bots",
+                )
+            )
 
-        embed = discord.Embed(
-            title=f"The {game} Hunger Games has started!", description=description
+        channel = self.client.get_channel(game.channel_id)
+        message = (
+            channel.get_partial_message(game.message_id)
+            if channel and game.message_id
+            else None
         )
-        await channel.send(embed=embed)
+
+        try:
+            await message.reply(view=view)
+        except (discord.NotFound, discord.Forbidden):
+            game.is_ended = True
+            await game.save()
 
     async def run_day(
         self, game: GameModel, players: list[PlayerModel], remaining_time: int
@@ -100,7 +126,11 @@ class GamesManager:
         )
 
         channel = self.client.get_channel(game.channel_id)
-        color = {"color": discord.Color.from_rgb(0, 0, 0)}
+
+        view = discord.ui.DesignerView(timeout=0)
+        container = discord.ui.Container(color=discord.Color.from_rgb(0, 0, 0))
+        view.add_item(container)
+
         if len(deaths_today) == 0:
             alive_descriptions = [
                 "A quiet night enveloped the arena as the moonlight danced upon the motionless bodies. No lives were claimed, leaving the tributes to ponder their next move.",
@@ -112,13 +142,9 @@ class GamesManager:
                 "The arena remains untouched by the grim hand of death. The tributes, uncertain of the reasons behind this tranquility, grow increasingly cautious in their actions.",
                 "The night brings no loss of life, confounding both the tributes and the spectators. The tension mounts as they wonder if this is a testament to their ingenuity or simply an anomaly.",
             ]
-            embeds = [
-                discord.Embed(
-                    title="There were no shots fired this night...",
-                    description=random.choice(alive_descriptions),
-                    **color,
-                )
-            ]
+
+            container.add_text("# There were no shots fired this night...")
+            container.add_text(f"> {random.choice(alive_descriptions)}")
         else:
             death_descriptions = [
                 "Another tribute has fallen, their fate sealed by a merciless force.",
@@ -131,20 +157,15 @@ class GamesManager:
                 "A tribute's light is extinguished, their story left unfinished in the annals of the Hunger Games.",
             ]
             day_data = [
-                f"{player} died by {player.death_by}." for player in deaths_today
-            ]
-            embeds = [
-                discord.Embed(
-                    title="Cannon shots go off in the distance...",
-                    description=f"The following tributes have died today:",
-                    **color,
-                ),
-                discord.Embed(description="\n".join(day_data), **color).set_footer(
-                    text=random.choice(death_descriptions)
-                ),
+                f"- {player} died by {player.death_by}." for player in deaths_today
             ]
 
-        await channel.send(f"Hunger Games **{game}**.", embeds=embeds)
+            container.add_text("# Cannon shots go off in the distance...")
+            container.add_text("> The following tributes have died today:")
+            container.add_text("\n".join(day_data))
+            container.add_text(f"-# {random.choice(death_descriptions)}")
+
+        await channel.send(view=view)
 
     async def run_players_events(
         self, game: GameModel, players: list[PlayerModel], remaining_time: int
@@ -174,17 +195,14 @@ class GamesManager:
         event = await get_random_event()
         event = await event.execute(game=game, player=player, event=event)
 
-        embed = discord.Embed(
-            title=f"Hunger Games {game}",
-            description=event.text,
-            color=event.type.value,
-        )
+        view = discord.ui.DesignerView(timeout=0)
+        container = discord.ui.Container(color=event.type.value)
+        view.add_item(container)
 
-        if user := self.client.get_user(player.user_id):
-            embed.set_thumbnail(url=user.display_avatar)
+        container.add_text(event.text)
 
         channel = self.client.get_channel(game.channel_id)
-        await channel.send(str(player), embed=embed)
+        await channel.send(view=view)
 
     async def check_game_end(
         self, game: GameModel, skip_check=False
@@ -209,13 +227,24 @@ class GamesManager:
 
         await self.winner_callback(winner=winner)
 
-        embed = discord.Embed(
-            title=f"Hunger Games {game}",
-            description=f"🎉 {winner} won the **{game}** Hunger Games!",
-            color=discord.Color.gold(),
-        )
+        view = discord.ui.DesignerView(timeout=0)
+        container = discord.ui.Container(color=discord.Color.gold())
+        view.add_item(container)
+
+        guild = self.client.get_guild(game.guild_id)
+        member = guild.get_member(winner.user_id) if guild else None
+
+        if member:
+            section = discord.ui.Section(
+                accessory=discord.ui.Thumbnail(member.display_avatar.url),
+            )
+            section.add_text(f"# 🎉 {winner} won the **{game}** Hunger Games!")
+            container.add_item(section)
+        else:
+            container.add_text(f"# 🎉 {winner} won the **{game}** Hunger Games!")
+
         channel = self.client.get_channel(game.channel_id)
-        return await channel.send(str(winner), embed=embed)
+        return await channel.send(view=view)
 
     async def winner_callback(self, winner: PlayerModel) -> None:
         """

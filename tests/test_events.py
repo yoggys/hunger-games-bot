@@ -8,7 +8,7 @@ from game_utils.Events import Event
 from game_utils.events_data import event_list
 from utils.models import GameModel, PlayerModel
 
-loop = asyncio.get_event_loop_policy().new_event_loop()
+loop = asyncio.new_event_loop()
 
 
 async def initialize():
@@ -62,3 +62,66 @@ async def test_events():
         # Test events attributes after callback
         assert event.text != None
         assert event._type != None
+
+
+@pytest.mark.asyncio()
+async def test_rare_items_are_part_of_event_correlations(monkeypatch):
+    monkeypatch.setattr(random, "random", lambda: 0.99)
+    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
+
+    game = await GameModel.create(guild_id=1, channel_id=1, owner_id=1)
+    player = await PlayerModel.create(game=game, user_id=99)
+
+    cases = [
+        ("oracle_riddle", ["oracle_blessing"], "oracle_blessing"),
+        ("time_distortion", ["temporal_edge"], "temporal_edge"),
+        ("ghost_encounter", ["spirit_gift"], "spirit_gift"),
+        ("last_water_source", ["fresh_water"], "fresh_water"),
+        ("seed_cache", ["seeds"], "food"),
+        ("rivalry_ignite", ["rivalry_marker"], "rivalry_marker"),
+    ]
+
+    for callback_name, inventory, expected_item in cases:
+        player.inventory = inventory
+        player.is_injured = False
+        player.is_alive = True
+        await player.save()
+
+        callback = {
+            "oracle_riddle": __import__(
+                "game_utils.events_data", fromlist=["oracle_riddle"]
+            ).oracle_riddle,
+            "time_distortion": __import__(
+                "game_utils.events_data", fromlist=["time_distortion"]
+            ).time_distortion,
+            "ghost_encounter": __import__(
+                "game_utils.events_data", fromlist=["ghost_encounter"]
+            ).ghost_encounter,
+            "last_water_source": __import__(
+                "game_utils.events_data", fromlist=["last_water_source"]
+            ).last_water_source,
+            "seed_cache": __import__(
+                "game_utils.events_data", fromlist=["seed_cache"]
+            ).seed_cache,
+            "rivalry_ignite": __import__(
+                "game_utils.events_data", fromlist=["rivalry_ignite"]
+            ).rivalry_ignite,
+        }[callback_name]
+
+        event = Event(weight=1, callback=callback)
+        result = await event.execute(game=game, player=player, event=event)
+
+        assert result._type is not None
+        assert (
+            result._type
+            != __import__(
+                "game_utils.events_data", fromlist=["EventType"]
+            ).EventType.NEGATIVE
+        )
+        assert expected_item in [
+            str(item).strip().lower() for item in (player.inventory or [])
+        ], (
+            callback_name,
+            result.text,
+            player.inventory,
+        )

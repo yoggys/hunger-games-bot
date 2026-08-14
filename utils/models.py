@@ -20,6 +20,7 @@ class GameModel(BaseModel):
 
     guild_id = fields.BigIntField()
     channel_id = fields.BigIntField()
+    message_id = fields.BigIntField(null=True)
     owner_id = fields.BigIntField()
 
     is_invite_only = fields.BooleanField(default=False)

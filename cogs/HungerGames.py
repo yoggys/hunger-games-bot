@@ -22,6 +22,97 @@ class HungerGames(commands.Cog):
     async def on_ready(self):
         await self.GamesManager.run_games()
 
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        custom_id = interaction.custom_id
+        if not custom_id:
+            return
+
+        if custom_id.startswith("start_game_"):
+            game_id = int(custom_id.split("start_game_")[1])
+
+            game = await GameModel.get_or_none(
+                id=game_id, guild_id=interaction.guild.id
+            )
+            if not game:
+                return await interaction.response.send_message(
+                    "❌ Game not found.", ephemeral=True
+                )
+
+            if game.owner_id != interaction.user.id:
+                return await interaction.response.send_message(
+                    "❌ You are not the owner of this game.", ephemeral=True
+                )
+
+            if game.is_started:
+                return await interaction.response.send_message(
+                    "❌ This game has already started.", ephemeral=True
+                )
+
+            await game.fetch_related("players")
+            if len(game.players) < 2:
+                return await interaction.response.send_message(
+                    "❌ This game does not have enough players.", ephemeral=True
+                )
+
+            try:
+                await interaction.message.edit(view=None)
+            except (discord.NotFound, discord.Forbidden):
+                game.is_ended = True
+                return await game.save()
+
+            game.is_started = True
+            await game.save()
+
+            await interaction.response.send_message(
+                f"✅ The game **{game}** has started.", ephemeral=True
+            )
+            asyncio.ensure_future(self.GamesManager.run_game(game=game))
+
+        elif custom_id.startswith("join_game_"):
+            game_id = int(custom_id.split("join_game_")[1])
+
+            game = await GameModel.get_or_none(
+                id=game_id, guild_id=interaction.guild.id
+            )
+            if not game:
+                return await interaction.response.send_message(
+                    "❌ Game not found.", ephemeral=True
+                )
+
+            if game.is_started:
+                return await interaction.response.send_message(
+                    "❌ This game has already started.", ephemeral=True
+                )
+
+            if (
+                game.is_invite_only
+                and interaction.user.id not in game.invited_users
+                and game.owner_id != interaction.user.id
+            ):
+                return await interaction.response.send_message(
+                    "❌ You are not invited to this game.", ephemeral=True
+                )
+
+            await game.fetch_related("players")
+            if interaction.user.id in [player.user_id for player in game.players]:
+                return await interaction.response.send_message(
+                    "❌ You are already in this game.", ephemeral=True
+                )
+
+            if len(game.players) >= game.max_players:
+                return await interaction.response.send_message(
+                    "❌ This game is full.", ephemeral=True
+                )
+
+            await PlayerModel.create(game=game, user_id=interaction.user.id)
+            current_players = len(game.players) + 1
+
+            await interaction.response.send_message(
+                f"✅ {interaction.user.mention} has joined the game **{game}** ({current_players}/{game.max_players}).",
+                ephemeral=True,
+            )
+
     @commands.slash_command(description="Create a Hunger Games game.")
     @discord.default_permissions(moderate_members=True)
     async def hgcreate(
@@ -51,23 +142,68 @@ class HungerGames(commands.Cog):
             day_length=day_length,
         )
 
-        description = f"To join the game type `/hgjoin game_id:{game.id}`"
-        if private:
-            description += (
-                "\nThis game is private, so only the owner can invite players."
-            )
+        description = (
+            "This game is private, so only the owner can invite players."
+            if private
+            else None
+        )
 
         embed = discord.Embed(
-            title="✅ Game created!",
             description=description,
-            color=discord.Color.blurple(),
+            color=discord.Color.gold(),
         )
+
+        embed.set_author(
+            name=f"Hunger Games",
+            icon_url=ctx.bot.user.display_avatar.url,
+        )
+
         embed.add_field(name="Game ID", value=f"` {game.id} `")
         embed.add_field(name="Max players", value=f"` {game.max_players} `")
-        embed.add_field(name="Private", value=f"` {game.is_invite_only} `")
+        embed.add_field(
+            name="Private",
+            value="` {} `".format("✅" if game.is_invite_only else "❌"),
+        )
         embed.add_field(name="Channel", value=channel.mention)
+        embed.add_field(name="Host", value=ctx.author.mention)
 
-        await ctx.respond(embed=embed, view=JoinGameView(game.id))
+        message = await channel.send(embed=embed, view=JoinGameView(game.id))
+        game.message_id = message.id
+        await game.save()
+
+        await ctx.respond(
+            f"✅ Hunger Games created: {message.jump_url}", ephemeral=True
+        )
+
+    @commands.slash_command(description="Check players in a Hunger Games game.")
+    async def hgplayers(
+        self,
+        ctx: discord.ApplicationContext,
+        game_id: discord.Option(int, "Game ID to check."),
+    ) -> Any:
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
+        if not game:
+            return await ctx.respond("❌ Game not found.", ephemeral=True)
+
+        await game.fetch_related("players")
+
+        description = ""
+        for index, player in enumerate(game.players):
+            if player.is_bot:
+                description += f"{index + 1}. ` Bot #{player.user_id} `\n"
+            else:
+                description += f"{index + 1}. <@{player.user_id}>\n"
+
+        embed = discord.Embed(
+            description=description or "> No players yet.",
+            color=discord.Color.gold(),
+        )
+        embed.set_author(
+            name=f"Hunger Games #{game.id}",
+            icon_url=ctx.bot.user.display_avatar.url,
+        )
+
+        await ctx.respond(embed=embed, ephemeral=True)
 
     @commands.slash_command(description="Invite someone to a Hunger Games game.")
     async def hginvite(
@@ -76,7 +212,7 @@ class HungerGames(commands.Cog):
         game_id: discord.Option(int, "Game ID to invite to."),
         member: discord.Option(discord.Member, "Member to invite."),
     ) -> Any:
-        game = await GameModel.get_or_none(id=game_id)
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
@@ -125,7 +261,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to join."),
     ) -> Any:
-        game = await GameModel.get_or_none(id=game_id)
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
@@ -163,7 +299,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to invite to."),
     ) -> Any:
-        game = await GameModel.get_or_none(id=game_id)
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
@@ -183,10 +319,23 @@ class HungerGames(commands.Cog):
                 "❌ This game does not have enough players.", ephemeral=True
             )
 
+        channel = ctx.guild.get_channel(game.channel_id)
+        message = (
+            channel.get_partial_message(game.message_id)
+            if channel and game.message_id
+            else None
+        )
+
+        try:
+            await message.edit(view=None)
+        except (discord.NotFound, discord.Forbidden):
+            game.is_ended = True
+            return await game.save()
+
         game.is_started = True
         await game.save()
 
-        await ctx.respond(f"✅ The game **{game}** has started.")
+        await ctx.respond(f"✅ The game **{game}** has started.", ephemeral=True)
         asyncio.ensure_future(self.GamesManager.run_game(game=game))
 
     def format_player(self, player: PlayerModel, winner: Optional[PlayerModel]) -> str:
@@ -259,7 +408,7 @@ class HungerGames(commands.Cog):
         ctx: discord.ApplicationContext,
         game_id: discord.Option(int, "Game ID to get more info."),
     ) -> Any:
-        game = await GameModel.get_or_none(id=game_id)
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
@@ -279,14 +428,17 @@ class HungerGames(commands.Cog):
         alive_count = len([player for player in players if player.is_alive])
         dead_count = len(players) - alive_count
 
-        game_embed = discord.Embed(
-            title=f"Hunger Games #{game_id}", color=discord.Color.gold()
+        game_embed = discord.Embed(color=discord.Color.gold())
+        game_embed.set_author(
+            name=f"Hunger Games #{game_id}",
+            icon_url=ctx.bot.user.display_avatar.url,
         )
+
         game_embed.add_field(name="Day", value=f"` {game.current_day} `", inline=True)
         game_embed.add_field(name="Alive", value=f"` {alive_count} `", inline=True)
         game_embed.add_field(name="Dead", value=f"` {dead_count} `", inline=True)
         game_embed.set_thumbnail(
-            url="https://cdn.discordapp.com/attachments/704387250351243425/1116424425722613790/logo-hgb.png"
+            url=ctx.bot.user.display_avatar.url,
         )
 
         if game.is_ended:
@@ -360,9 +512,12 @@ class HungerGames(commands.Cog):
                 ephemeral=True,
             )
 
-        embed = discord.Embed(
-            title=f"Hunger Games player {state} history", color=discord.Color.gold()
+        embed = discord.Embed(color=discord.Color.gold())
+        embed.set_author(
+            name=f"Hunger Games - player {state} history",
+            icon_url=ctx.bot.user.display_avatar.url,
         )
+
         embed.add_field(name="Games", value=f"` {games} `")
         embed.add_field(name="Won", value=f"` {won_games} `")
         embed.add_field(name="Kills", value=f"` {player_kills} `")
@@ -384,9 +539,12 @@ class HungerGames(commands.Cog):
         )
         games_kills = sum([g.killed_players for g in games_kills if g.killed_players])
 
-        embed = discord.Embed(
-            title="Hunger Games server history", color=discord.Color.gold()
+        embed = discord.Embed(color=discord.Color.gold())
+        embed.set_author(
+            name="Hunger Games - server history",
+            icon_url=ctx.bot.user.display_avatar.url,
         )
+
         embed.add_field(name="Games", value=f"` {games} `")
         embed.add_field(name="Finished", value=f"` {games_finished} `")
         embed.add_field(name="Total kills", value=f"` {games_kills} `")
@@ -450,7 +608,7 @@ class HungerGames(commands.Cog):
         game_id: discord.Option(int, "Game ID."),
         count: discord.Option(int, "Number of bots to create.") = 1,
     ) -> Any:
-        game = await GameModel.get_or_none(id=game_id)
+        game = await GameModel.get_or_none(id=game_id, guild_id=ctx.guild.id)
         if not game:
             return await ctx.respond("❌ Game not found.", ephemeral=True)
 
