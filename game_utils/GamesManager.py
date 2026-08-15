@@ -192,6 +192,10 @@ class GamesManager:
 
     async def player_event(self, game: GameModel, player: PlayerModel) -> None:
         """Run a player event."""
+
+        # Fetch related players to ensure we have the latest data
+        await game.fetch_related("players")
+
         event = await get_random_event()
         event = await event.execute(game=game, player=player, event=event)
 
@@ -218,7 +222,6 @@ class GamesManager:
         if winner.current_day != game.current_day:
             winner.current_day = game.current_day
 
-        winner.is_winner = True
         winner.winner_of = game
         await winner.save()
 

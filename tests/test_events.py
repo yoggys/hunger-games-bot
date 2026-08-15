@@ -1,8 +1,11 @@
 import asyncio
 import random
+from types import SimpleNamespace
 
 import pytest
 from tortoise import Tortoise, connections
+
+from game_utils.GamesManager import GamesManager
 
 from game_utils.Events import Event
 from game_utils.events_data import event_list
@@ -125,3 +128,35 @@ async def test_rare_items_are_part_of_event_correlations(monkeypatch):
             result.text,
             player.inventory,
         )
+
+
+@pytest.mark.asyncio()
+async def test_end_game_tracks_winner_only_via_relation(monkeypatch):
+    game = await GameModel.create(guild_id=10, channel_id=20, owner_id=30)
+    winner = await PlayerModel.create(game=game, user_id=101, is_alive=True)
+    await PlayerModel.create(game=game, user_id=102, is_alive=False)
+
+    class DummyChannel:
+        async def send(self, *args, **kwargs):
+            return None
+
+    manager = GamesManager(
+        client=SimpleNamespace(
+            get_channel=lambda *_args, **_kwargs: DummyChannel(),
+            get_guild=lambda *_args, **_kwargs: SimpleNamespace(
+                get_member=lambda *_: None
+            ),
+        )
+    )
+
+    async def fake_winner_callback(winner):
+        return None
+
+    monkeypatch.setattr(manager, "winner_callback", fake_winner_callback)
+
+    result = await manager.end_game(game=game)
+
+    stored_winner = await PlayerModel.get(id=winner.id)
+    assert result is None
+    assert stored_winner.winner_of_id == game.id
+    assert not hasattr(stored_winner, "is_winner")
