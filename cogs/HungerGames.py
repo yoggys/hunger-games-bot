@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import discord
 from discord.ext import commands
-from tortoise.functions import Sum
 from tortoise.queryset import Count, Q
 
 from game_utils.GamesManager import GamesManager
@@ -113,13 +112,50 @@ class HungerGames(commands.Cog):
                 ephemeral=True,
             )
 
+        elif custom_id.startswith("game_players_"):
+            game_id = int(custom_id.split("game_players_")[1])
+
+            game = await GameModel.get_or_none(
+                id=game_id, guild_id=interaction.guild.id
+            )
+            if not game:
+                return await interaction.response.send_message(
+                    "❌ Game not found.", ephemeral=True
+                )
+
+            await game.fetch_related("players")
+            if len(game.players) == 0:
+                return await interaction.response.send_message(
+                    "❌ This game has no players.", ephemeral=True
+                )
+
+            description = ""
+            for index, player in enumerate(game.players):
+                if player.is_bot:
+                    description += f"{index + 1}. ` Bot #{player.user_id} `\n"
+                else:
+                    description += f"{index + 1}. <@{player.user_id}>\n"
+
+            embed = discord.Embed(
+                description=description or "> No players yet.",
+                color=discord.Color.gold(),
+            )
+            embed.set_author(
+                name=f"Hunger Games #{game.id}",
+                icon_url=interaction.client.user.display_avatar.url,
+            )
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
     @commands.slash_command(description="Create a Hunger Games game.")
     @discord.default_permissions(moderate_members=True)
     async def hgcreate(
         self,
         ctx: discord.ApplicationContext,
         private: discord.Option(bool, "Should the game be private?") = False,
-        day_length: discord.Option(int, "Length of each day in minutes.") = 60,
+        day_length: discord.Option(
+            int, "Length of each day in minutes. (default: 5)"
+        ) = 5,
         max_players: discord.Option(int, "Maximum number of players.") = 24,
         channel: discord.Option(
             discord.TextChannel, "Channel to create the game in."
@@ -130,6 +166,11 @@ class HungerGames(commands.Cog):
         ):
             return await ctx.respond(
                 "❌ Maximum players must be between 2 and 24.", ephemeral=True
+            )
+
+        if day_length < 1 and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.respond(
+                "❌ Day length must be at least 1 minute.", ephemeral=True
             )
 
         channel = channel or ctx.channel
@@ -167,13 +208,158 @@ class HungerGames(commands.Cog):
         embed.add_field(name="Channel", value=channel.mention)
         embed.add_field(name="Host", value=ctx.author.mention)
 
-        message = await channel.send(embed=embed, view=JoinGameView(game.id))
+        try:
+            message = await channel.send(embed=embed, view=JoinGameView(game.id))
+        except discord.Forbidden:
+            await ctx.respond(
+                "❌ I don't have permission to send messages in that channel.",
+                ephemeral=True,
+            )
+            return await game.delete()
+
         game.message_id = message.id
         await game.save()
 
         await ctx.respond(
             f"✅ Hunger Games created: {message.jump_url}", ephemeral=True
         )
+
+    @commands.slash_command(description="Create a Hunger Games game.")
+    @discord.default_permissions(moderate_members=True)
+    async def hgedit(
+        self,
+        ctx: discord.ApplicationContext,
+        game_id: discord.Option(int, "Game ID to edit."),
+        private: discord.Option(bool, "Should the game be private?") = None,
+        day_length: discord.Option(int, "Length of each day in minutes.") = None,
+        max_players: discord.Option(int, "Maximum number of players.") = None,
+        channel: discord.Option(
+            discord.TextChannel, "Channel to create the game in."
+        ) = None,
+    ) -> Any:
+        if (
+            private is None
+            and day_length is None
+            and max_players is None
+            and channel is None
+        ):
+            return await ctx.respond(
+                "❌ You must provide at least one option to edit.", ephemeral=True
+            )
+
+        game = await GameModel.get_or_none(
+            id=game_id, guild_id=ctx.guild.id, owner_id=ctx.author.id, is_started=False
+        )
+
+        if not game:
+            return await ctx.respond(
+                "❌ This game does not exist or has already started.", ephemeral=True
+            )
+
+        if max_players and (
+            max_players < 2
+            or (max_players > 24 and not await ctx.bot.is_owner(ctx.author))
+        ):
+            return await ctx.respond(
+                "❌ Maximum players must be between 2 and 24.", ephemeral=True
+            )
+
+        if day_length and day_length < 1 and not await ctx.bot.is_owner(ctx.author):
+            return await ctx.respond(
+                "❌ Day length must be at least 1 minute.", ephemeral=True
+            )
+
+        description = (
+            "This game is private, so only the owner can invite players."
+            if private
+            else None
+        )
+
+        embed = discord.Embed(
+            description=description,
+            color=discord.Color.gold(),
+        )
+
+        embed.set_author(
+            name=f"Hunger Games",
+            icon_url=ctx.bot.user.display_avatar.url,
+        )
+
+        embed.add_field(name="Game ID", value=f"` {game.id} `")
+        embed.add_field(
+            name="Max players",
+            value=f"` {game.max_players if max_players is None else max_players} `",
+        )
+        embed.add_field(
+            name="Private",
+            value="` {} `".format(
+                (
+                    "✅"
+                    if (game.is_invite_only if private is None else private)
+                    else "❌"
+                )
+            ),
+        )
+        embed.add_field(
+            name="Channel",
+            value=channel.mention if channel else f"<#{game.channel_id}>",
+        )
+        embed.add_field(name="Host", value=ctx.author.mention)
+
+        if channel and channel.id != game.channel_id:
+            try:
+                message = await channel.send(embed=embed, view=JoinGameView(game.id))
+            except discord.Forbidden:
+                return await ctx.respond(
+                    "❌ I don't have permission to send messages in that channel.",
+                    ephemeral=True,
+                )
+
+            try:
+                old_channel = ctx.guild.get_channel(game.channel_id)
+                old_message = (
+                    old_channel.get_partial_message(game.message_id)
+                    if old_channel and game.message_id
+                    else None
+                )
+                await old_message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+
+            game.channel_id = channel.id
+            game.message_id = message.id
+        else:
+            message = (
+                ctx.guild.get_channel(game.channel_id).get_partial_message(
+                    game.message_id
+                )
+                if game.channel_id and game.message_id
+                else None
+            )
+            if message and message.channel.can_send():
+                try:
+                    await message.edit(embed=embed)
+                except discord.NotFound:
+                    return await ctx.respond(
+                        "❌ Original message not found. Please specify a new channel to send the game message.",
+                        ephemeral=True,
+                    )
+            else:
+                return await ctx.respond(
+                    "❌ I don't have permission to send messages in the original channel. Please specify a new channel to send the game message.",
+                    ephemeral=True,
+                )
+
+        if private is not None:
+            game.is_invite_only = private
+        if day_length is not None:
+            game.day_length = day_length
+        if max_players is not None:
+            game.max_players = max_players
+
+        await game.save()
+
+        await ctx.respond(f"✅ Hunger Games edited: {message.jump_url}", ephemeral=True)
 
     @commands.slash_command(description="Check players in a Hunger Games game.")
     async def hgplayers(

@@ -22,6 +22,13 @@ class JoinGameView(discord.ui.View):
         )
         self.add_item(button)
 
+        button = discord.ui.Button(
+            label="👥 Players",
+            style=discord.ButtonStyle.gray,
+            custom_id=f"game_players_{game_id}",
+        )
+        self.add_item(button)
+
 
 class InviteView(discord.ui.View):
     def __init__(self, client: HungerGamesBot):

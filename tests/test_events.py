@@ -5,10 +5,9 @@ from types import SimpleNamespace
 import pytest
 from tortoise import Tortoise, connections
 
-from game_utils.GamesManager import GamesManager
-
 from game_utils.Events import Event
 from game_utils.events_data import event_list
+from game_utils.GamesManager import GamesManager
 from utils.models import GameModel, PlayerModel
 
 loop = asyncio.new_event_loop()
