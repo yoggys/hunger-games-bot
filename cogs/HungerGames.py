@@ -225,6 +225,10 @@ class HungerGames(commands.Cog):
             name="Private",
             value="` {} `".format("✅" if game.is_invite_only else "❌"),
         )
+        embed.add_field(
+            name="Day length",
+            value=f"` {game.day_length} `",
+        )
         embed.add_field(name="Channel", value=channel.mention)
         embed.add_field(name="Host", value=ctx.author.mention)
 
@@ -319,6 +323,10 @@ class HungerGames(commands.Cog):
                     else "❌"
                 )
             ),
+        )
+        embed.add_field(
+            name="Day length",
+            value=f"` {game.day_length if day_length is None else day_length} `",
         )
         embed.add_field(
             name="Channel",
