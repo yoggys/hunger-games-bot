@@ -129,23 +129,43 @@ class HungerGames(commands.Cog):
                     "❌ This game has no players.", ephemeral=True
                 )
 
-            description = ""
-            for index, player in enumerate(game.players):
-                if player.is_bot:
-                    description += f"{index + 1}. ` Bot #{player.user_id} `\n"
-                else:
-                    description += f"{index + 1}. <@{player.user_id}>\n"
-
+            base_message = f"> Total players: ` {len(game.players)} `\n\n"
             embed = discord.Embed(
-                description=description or "> No players yet.",
+                description=(
+                    "> No players yet." if len(game.players) == 0 else base_message
+                ),
                 color=discord.Color.gold(),
             )
             embed.set_author(
                 name=f"Hunger Games #{game.id}",
-                icon_url=interaction.client.user.display_avatar.url,
+                icon_url=self.client.user.display_avatar.url,
             )
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            embeds = []
+            for index, player in enumerate(game.players):
+                row = (
+                    f"{index + 1}. ` Bot #{player.user_id} `\n"
+                    if player.is_bot
+                    else f"{index + 1}. <@{player.user_id}>\n"
+                )
+
+                if len(embed.description) + len(row) > 4096 or (
+                    index != 0 and index % 20 == 0
+                ):
+                    embeds.append(embed.copy())
+                    embed.description = base_message
+                    embed.description += row
+                else:
+                    embed.description += row
+
+                if index == len(game.players) - 1:
+                    embeds.append(embed.copy())
+
+            if len(embeds) == 0:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+            paginator = Paginator(pages=embeds)
+            await paginator.respond(interaction, ephemeral=True)
 
     @commands.slash_command(description="Create a Hunger Games game.")
     @discord.default_permissions(moderate_members=True)
@@ -373,23 +393,40 @@ class HungerGames(commands.Cog):
 
         await game.fetch_related("players")
 
-        description = ""
-        for index, player in enumerate(game.players):
-            if player.is_bot:
-                description += f"{index + 1}. ` Bot #{player.user_id} `\n"
-            else:
-                description += f"{index + 1}. <@{player.user_id}>\n"
-
+        base_message = f"> Total players: ` {len(game.players)} `\n\n"
         embed = discord.Embed(
-            description=description or "> No players yet.",
+            description="> No players yet." if len(game.players) == 0 else base_message,
             color=discord.Color.gold(),
         )
         embed.set_author(
             name=f"Hunger Games #{game.id}",
-            icon_url=ctx.bot.user.display_avatar.url,
+            icon_url=self.client.user.display_avatar.url,
         )
 
-        await ctx.respond(embed=embed, ephemeral=True)
+        embeds = []
+        for index, player in enumerate(game.players):
+            row = (
+                f"{index + 1}. ` Bot #{player.user_id} `\n"
+                if player.is_bot
+                else f"{index + 1}. <@{player.user_id}>\n"
+            )
+            if len(embed.description) + len(row) > 4096 or (
+                index != 0 and index % 20 == 0
+            ):
+                embeds.append(embed.copy())
+                embed.description = base_message
+                embed.description += row
+            else:
+                embed.description += row
+
+            if index == len(game.players) - 1:
+                embeds.append(embed.copy())
+
+        if len(embeds) == 0:
+            await ctx.respond(embed=embed, ephemeral=True)
+
+        paginator = Paginator(pages=embeds)
+        await paginator.respond(ctx.interaction, ephemeral=True)
 
     @commands.slash_command(description="Invite someone to a Hunger Games game.")
     async def hginvite(
